@@ -105,10 +105,12 @@ def fftgram(timeseries,stride):
         name = timeseries.name,epoch=timeseries.epoch,f0=0,df=df,
         dt=dt,copy=True,unit=timeseries.unit/u.Hz**0.5,dtype=dtype)
     # stride through TimeSeries, recording FFTs as columns of Spectrogram
+    out.starttimes = np.zeros(nsteps)
     for step in range(nsteps):
         # indexes for this step
         idx = stride * step
         idx_end = idx + stride/2
+        out.starttimes[step]=(idx/stride)*timeseries.epoch
         stepseries = timeseries[idx:idx_end]
         # zeropad, window, fft, shift zero to center, normalize
         tempfft = (fft.fftshift(fft.fft(np.hstack(
@@ -125,7 +127,9 @@ def fftgram(timeseries,stride):
 
 def calPSD(fftgram,adjacent=1):
     """calculates PSD from fftgrams
-    properly
+    properly by averaging adjacent non-ovlping 
+    segments. Since default fftgram overlaps segments
+    we have to be careful here...
     Parameters
     ----------
         fftgram : Spectrogram object
@@ -138,16 +142,17 @@ def calPSD(fftgram,adjacent=1):
         psdgram : Spectrogram object
             psd spectrogram calculated in
             spirit of STAMP/stochastic
-    Raises
-    ------
-        Errors : description
     """
     psd = np.multiply(fftgram,np.conj(fftgram))
-    psdleft = np.hstack((psd,np.zeros((psd.size,1))))
-    psdright = np.hstack((np.zeros((psd.size,1)),psd))
-    psd = np.divide(np.add(psdleft,psdright),2)
-    psd = Spectrogram(psd,name=fftgram.name,epoch=fftgram.epoch,f0=fftgram.f0
-        df=fftgram.df,dt=fftgram.dt,copy=True,unit=fftgram.unit**2)
-
-
-
+    psdleft = np.hstack((psd,np.zeros((psd.shape[0],4))))
+    psdright = np.hstack((np.zeros((psd.shape[0],4)),psd))
+    # psd we want is average of adjacent, non-ovlped segs. don't include
+    # middle segment for now. throw away edges.
+    psd = np.divide(np.add(psdleft,psdright),2)[4:-4] 
+    psd = Spectrogram(psd,name=fftgram.name,epoch=fftgram.epoch,
+        f0=fftgram.f0,df=fftgram.df,dt=fftgram.dt,
+        copy=True,unit=fftgram.unit**2)
+    # recall we're throwing away first and last 2 segments. 
+    # to be able to do averaging
+    psd.starttimes = fftgram.starttimes[2:-2]
+    psd.frequencies = fftgram.frequencies
