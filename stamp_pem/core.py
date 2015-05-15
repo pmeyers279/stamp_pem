@@ -7,8 +7,6 @@ import numpy as np
 import scipy.fftpack as fft 
 from astropy import units as u
 
-
-
 # ---------------------------------
 # RETRIEVING DATA FUNCTIONS
 # ---------------------------------
@@ -153,7 +151,7 @@ def psdgram(timeseries,stride,adjacent=1):
     nsteps = 2*int(timeseries.size // stride) - 1
     # only get positive frequencies
     nfreqs = int(fftlength*timeseries.sample_rate.value) / 2. + 1 
-    dtype = np.complex
+    dtype = np.real
     # initialize the spectrogram
     out = Spectrogram(np.zeros((nsteps,nfreqs),dtype=dtype),
         name = timeseries.name,epoch=timeseries.epoch,f0=0,df=df,
@@ -166,7 +164,7 @@ def psdgram(timeseries,stride,adjacent=1):
         idx_end = idx + stride
         out.starttimes[step]=(idx/stride)+timeseries.epoch.value
         stepseries = timeseries[idx:idx_end]
-        out[step] = stepseries.psd()
+        out[step] = stepseries.psd()[:-1]
 
     psdleft = np.hstack((out.data.T,np.zeros((out.data.shape[1],4))))
     psdright = np.hstack((np.zeros((out.data.shape[1],4)),out.data.T))
@@ -178,6 +176,47 @@ def psdgram(timeseries,stride,adjacent=1):
         copy=True,unit=out.unit)
     # recall we're throwing away first and last 2 segments. 
     # to be able to do averaging
-    psd.starttimes = out.starttimes
+    psd.starttimes = out.starttimes[2:-2]
     psd.frequencies = out.frequencies
     return psd
+
+def csdgram(channel1,channel2,stride):
+    """calculates csd spectrogram between two timeseries
+    or fftgrams. Allows for flexibility for holding DARM
+    fftgram in memory while looping over others.
+    Parameters
+    ----------
+        channel1 : TimeSeries or Spectrogram object
+            timeseries from channel 1
+        timeseries2 : TimeSeries or Spectrogram object
+            timeseries from channel 2
+    Returns
+    -------
+        csdgram : spectrogram object
+            csd spectrogram for two objects
+    """
+    if isinstance(channel1,TimeSeries):
+        fftgram1 = fftgram(channel1,stride)
+    elif isinstance(channel1,Spectrogram): 
+        fftgram1 = channel1
+    else: 
+        raise TypeError('First arg is either TimeSeries or Spectrogram object')
+    if isinstance(channel2,TimeSeries):
+        fftgram2 = fftgram(channel2,stride)
+    elif isinstance(channel2,Spectrogram): 
+        fftgram2 = channel2
+    else: 
+        raise TypeError('First arg is either TimeSeries or Spectrogram object')
+    # clip off first 2 and last 2 segments to be consistent with psd 
+    # calculation
+    out = np.multiply(fftgram1.data,np.conj(fftgram2.data)).T[2:-2]
+    starttimes = fftgram2.starttimes[2:-2]
+
+
+    csdname = 'csd spectrogram between %s and %s'%(timeseries1.name,timeseries2.name)
+    csdgram = Spectrogram(out,name=csdname,epoch=starttimes[0],df=fftgram1.df,
+        dt=fftgram1.dt,copy=True,unit=fftgram1.unit*fftgram2.unit)
+    csdgram.frequencies = fftgram1.frequencies
+    csdgram.starttimes = starttimes
+
+    return csdgram
