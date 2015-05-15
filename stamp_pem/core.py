@@ -1,7 +1,10 @@
 from gwpy.timeseries import TimeSeries
 from gwpy.timeseries import TimeSeriesDict
+from gwpy.spectrum import Spectrum
 from glue import datafind
 from gwpy.spectrogram import Spectrogram
+import numpy as np
+import scipy.fftpack as fft 
 
 
 
@@ -91,20 +94,33 @@ def fftgram(timeseries,stride):
     """
     fftlength = stride
     dt = stride
-    df = 1/fftlength
+    df = 1./fftlength
+    # number of values in a step
     stride *= timeseries.sample_rate.value
-    nsteps = int(fftlength*timeseries.size // stride)
-    nfreqs = int(fftlength*timeseries.sample_rate.value)
-    dtype = numpy.complex
-    out = Spectrogram(numpy.zeros((nsteps,nfreqs),dtype=dtype),
+    # number of steps
+    nsteps = int(timeseries.size // stride) 
+    # only get positive frequencies
+    nfreqs = int(fftlength*timeseries.sample_rate.value) / 2. 
+    dtype = np.complex
+    # initialize the spectrogram
+    out = Spectrogram(np.zeros((nsteps,nfreqs),dtype=dtype),
         name = timeseries.name,epoch=timeseries.epoch,f0=0,df=df,
-        dt=dt,copy=True,unit=self.unit,dtype=dtype)
+        dt=dt,copy=True,unit=timeseries.unit,dtype=dtype)
     # stride through TimeSeries, recording FFTs as columns of Spectrogram
-    out.frequencies = np.arange(0,timeseries.sample_rate.value/2,df)
     for step in range(nsteps):
+        # indexes for this step
         idx = stride * step
         idx_end = idx + stride
-        stepseries = timeseries.data[idx:idx_end]
-        out[step] = fft.fft(np.hstack((stepseries,np.zeros(1,stepseries.size))))[0:np.floor(stride/2.+1)]
+        stepseries = timeseries[idx:idx_end]
+        # zeropad, fft, normalize
+        tempfft = fft.fftshift(fft.fft(np.hstack((stepseries.data,np.zeros(stepseries.size)))))*1/stride
+        # get the positive indices we want (start in middle, take very other)
+        idxs = np.arange(tempfft.size/2,tempfft.size,2)
+        out.data[step] = tempfft[idxs]
+        if step == 0:
+            # what are the frequencies we actually have??
+            out.frequencies = fft.fftshift(fft.fftfreq(int(2*stride),1./timeseries.sample_rate.value))[idxs]
+            
+    return out
 
 
