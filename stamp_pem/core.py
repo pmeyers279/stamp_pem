@@ -5,7 +5,7 @@ from glue import datafind
 from gwpy.spectrogram import Spectrogram
 import numpy as np
 import scipy.fftpack as fft 
-from astropoy import units as u
+from astropy import units as u
 
 
 
@@ -96,7 +96,7 @@ def fftgram(timeseries,stride):
     # number of values in a step
     stride *= timeseries.sample_rate.value
     # number of steps
-    nsteps = 2*int(timeseries.size // stride) 
+    nsteps = 2*int(timeseries.size // stride)  - 1 
     # only get positive frequencies
     nfreqs = int(fftlength*timeseries.sample_rate.value) / 2. 
     dtype = np.complex
@@ -108,9 +108,9 @@ def fftgram(timeseries,stride):
     out.starttimes = np.zeros(nsteps)
     for step in range(nsteps):
         # indexes for this step
-        idx = stride * step
-        idx_end = idx + stride/2
-        out.starttimes[step]=(idx/stride)*timeseries.epoch
+        idx = (stride/2) * step
+        idx_end = idx + stride
+        out.starttimes[step]=(idx/stride)+timeseries.epoch.value
         stepseries = timeseries[idx:idx_end]
         # zeropad, window, fft, shift zero to center, normalize
         tempfft = (fft.fftshift(fft.fft(np.hstack(
@@ -122,12 +122,13 @@ def fftgram(timeseries,stride):
         out.data[step] = tempfft[idxs_fft]
         if step == 0:
             # what are the frequencies we actually have??
-            out.frequencies = fft.fftshift(fft.fftfreq(int(2*stride),1./timeseries.sample_rate.value))[idxs_freqs]
+            out.frequencies = fft.fftshift(fft.fftfreq(
+                int(2*stride),1./timeseries.sample_rate.value))[idxs_freqs]
     return out
 
-def calPSD(fftgram,adjacent=1):
-    """calculates PSD from fftgrams
-    properly by averaging adjacent non-ovlping 
+def psdgram(timeseries,stride,adjacent=1):
+    """calculates PSD from timeseries
+    properly using welch's method by averaging adjacent non-ovlping 
     segments. Since default fftgram overlaps segments
     we have to be careful here...
     Parameters
@@ -143,16 +144,40 @@ def calPSD(fftgram,adjacent=1):
             psd spectrogram calculated in
             spirit of STAMP/stochastic
     """
-    psd = np.multiply(fftgram,np.conj(fftgram))
-    psdleft = np.hstack((psd,np.zeros((psd.shape[0],4))))
-    psdright = np.hstack((np.zeros((psd.shape[0],4)),psd))
+    fftlength = stride
+    dt = stride
+    df = 1./fftlength
+    # number of values in a step
+    stride *= timeseries.sample_rate.value
+    # number of steps
+    nsteps = 2*int(timeseries.size // stride) - 1
+    # only get positive frequencies
+    nfreqs = int(fftlength*timeseries.sample_rate.value) / 2. + 1 
+    dtype = np.complex
+    # initialize the spectrogram
+    out = Spectrogram(np.zeros((nsteps,nfreqs),dtype=dtype),
+        name = timeseries.name,epoch=timeseries.epoch,f0=0,df=df,
+        dt=dt,copy=True,unit=timeseries.unit/u.Hz,dtype=dtype)
+    # stride through TimeSeries, recording FFTs as columns of Spectrogram
+    out.starttimes = np.zeros(nsteps)
+    for step in range(nsteps):
+        # indexes for this step
+        idx = (stride/2) * step
+        idx_end = idx + stride
+        out.starttimes[step]=(idx/stride)+timeseries.epoch.value
+        stepseries = timeseries[idx:idx_end]
+        out[step] = stepseries.psd()
+
+    psdleft = np.hstack((out.data.T,np.zeros((out.data.shape[1],4))))
+    psdright = np.hstack((np.zeros((out.data.shape[1],4)),out.data.T))
     # psd we want is average of adjacent, non-ovlped segs. don't include
     # middle segment for now. throw away edges.
-    psd = np.divide(np.add(psdleft,psdright),2)[4:-4] 
-    psd = Spectrogram(psd,name=fftgram.name,epoch=fftgram.epoch,
-        f0=fftgram.f0,df=fftgram.df,dt=fftgram.dt,
-        copy=True,unit=fftgram.unit**2)
+    psd = np.divide(np.add(psdleft,psdright),2).T[4:-4]
+    psd = Spectrogram(psd,name=out.name,epoch=out.epoch,
+        f0=out.f0,df=out.df,dt=out.dt,
+        copy=True,unit=out.unit)
     # recall we're throwing away first and last 2 segments. 
     # to be able to do averaging
-    psd.starttimes = fftgram.starttimes[2:-2]
-    psd.frequencies = fftgram.frequencies
+    psd.starttimes = out.starttimes
+    psd.frequencies = out.frequencies
+    return psd
