@@ -280,6 +280,8 @@ def cal_ccvar(sig):
     ccVar = np.sum(sig.data,axis=1)*sig.df
     ccVar = TimeSeries(ccVar,name='cc variance time series',
         unit=sig.unit*u.Hz,dt=sig.dt,copy=True,epoch=sig.epoch)
+    
+    return ccVar
 
 def window_factors(window1,window2):
     """calculates window factors
