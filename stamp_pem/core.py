@@ -213,10 +213,103 @@ def csdgram(channel1,channel2,stride):
     starttimes = fftgram2.starttimes[2:-2]
 
 
-    csdname = 'csd spectrogram between %s and %s'%(timeseries1.name,timeseries2.name)
+    csdname = 'csd spectrogram between %s and %s'%(fftgram1.name,fftgram2.name)
     csdgram = Spectrogram(out,name=csdname,epoch=starttimes[0],df=fftgram1.df,
         dt=fftgram1.dt,copy=True,unit=fftgram1.unit*fftgram2.unit)
     csdgram.frequencies = fftgram1.frequencies
     csdgram.starttimes = starttimes
 
     return csdgram
+
+def stamp_sigma_gram(channel1,channel2,stride):
+    """calculates STAMP sigma value
+    NOT normalized with window factors
+    Parameters
+    ----------
+        channel1 : TimeSeries or Spectrogram object
+            either timeseries or psd for channel1 
+        channel2 : TimeSeries or Spectrogram object
+            either timeseries or psd for channel2 
+        stride : `int`
+            segment duration usesd
+    Returns
+    -------
+        sigma_gram : Spectrogram object
+            spectrogram of stamp sigma value
+            not normalized with window factors
+    """
+    if isinstance(channel1,TimeSeries):
+        psd1 = psdgram(channel1,stride)
+    elif isinstance(channel1,Spectrogram):
+        psd1 - channel1
+    else:
+        raise TypeError('channel1 must be of correct type')
+
+    if isinstance(channel2,TimeSeries):
+        psd2 = psdgram(channel2,stride)
+    elif isinstance(channel2,Spectrogram):
+        psd2 - channel2
+    else:
+        raise TypeError('channel2 must be of correct type')
+
+    sigma_gram = np.power(psd1.df*np.multiply(psd1.data,psd2.data),-0.5)
+    sigma_gram_name = \
+    'STAMP sigma spectrogram for %s and %s'%(psd1.name,psd2.name)
+    # sqrt(df/(psd1*psd2)) -> units of power of some kind
+    sigma_gram_unit = (psd1.unit*psd2.unit/u.Hz)**-0.5
+    sigma_gram = Spectrogram(sigma_gram,name=sigma_gram_name,df=psd1.df,
+        dt=psd1.dt,unit=sigma_gram_unit,copy=True,epoch=psd1.epoch)
+    return sigma_gram
+
+def cal_ccvar(sig):
+    """calculate cross correlation variance
+    integrated over frequency
+    Parameters
+    ----------
+        sig : Spectrogram object
+            sigma spectrogram
+
+    Returns
+    -------
+        ccVar : timeseries object
+            ccVar TimeSeries
+    Raises
+    ------
+        Errors : description
+    """
+    ccVar = np.sum(sig.data,axis=1)*sig.df
+    ccVar = TimeSeries(ccVar,name='cc variance time series',
+        unit=sig.unit*u.Hz,dt=sig.dt,copy=True,epoch=sig.epoch)
+
+def window_factors(window1,window2):
+    """calculates window factors
+    necessary for stamp analysis
+    Parameters
+    ----------
+        window1 : array
+            window used for PSDs
+    Returns
+    -------
+        w1w2bar : array
+            average of product of windows
+        w1w2squaredbar : array
+            average of product of squares of windows
+        w1w2ovlsquaredbar : array
+            average of product of first and second
+            halves of window1 and window2. 
+    """
+    Nred = np.gcd(window1.size,window2.size)
+    if Nred==1:
+        raise ValueError('windows are not compatible')
+
+    # get reduced windows
+    window1red = window1[0:(N1-N1/Nred)]
+    window2red = window2[0:(N2=N2/Nred)]
+    idx = int(np.floor(Nred/2.))
+
+    w1w2bar = np.mean(np.multiply(window1red,window2red))
+    w1w2squaredbar = np.mean(np.multiply(np.power(window1red,2),np.power(window2red,2)))
+    w1w2ovlsquaredbar = np.mean(np.multiply(
+        np.multiply(window1red[0:idx],window2red[idx:]),
+        np.multiply(window1red[idx:],window2red[0:idx]))) 
+    return w1w2bar,w1w2squaredbar,w1w2ovlsquaredbar
