@@ -306,7 +306,7 @@ def window_factors(window1,window2):
 
     # get reduced windows
     window1red = window1[0:(N1-N1/Nred)]
-    window2red = window2[0:(N2=N2/Nred)]
+    window2red = window2[0:(N2-N2/Nred)]
     idx = int(np.floor(Nred/2.))
 
     w1w2bar = np.mean(np.multiply(window1red,window2red))
@@ -315,3 +315,52 @@ def window_factors(window1,window2):
         np.multiply(window1red[0:idx],window2red[idx:]),
         np.multiply(window1red[idx:],window2red[0:idx]))) 
     return w1w2bar,w1w2squaredbar,w1w2ovlsquaredbar
+
+def coarseGrain(spectrum,f0,df,N):
+    """coarse grain frequency spectrum
+    Parameters
+    ----------
+        spectrum : Spectrum object
+        df : new df for new spectrum
+        N : number of frequencies in resultant spectrum
+    Returns
+    -------
+        spectrumCG : Spectrum object
+            output spectrum
+    """
+    f0i = spectrum.frequencies[0]
+    dfi = spectrum.df
+    Ni = spectrum.size
+    fhighi = f0i+(Ni-1)*dfi
+    fhigh = f0+df*(N-1)
+    i = np.arange(0,Ny)
+
+    jlow = np.floor( (f0 + np.subtract(i,0.5)*df - f0i - 0.5*f0i)/dfi)
+    jhigh = np.floor( (f0 + np.add(i,0.5)*df - f0i - 0.5*f0i)/dfi)
+
+    index1 = jlow[0]
+    index2 = jhigh[jhigh.size-1]
+
+    fraclow =  (dfi + np.add(jlow,0.5)/dfi - f0 - np.subtract(i,0.5)*df)/dfi
+    frachigh = (df + np.add(i,0.5)/df - f0 - np.subtract(jhigh,0.5)*dfi)/dfi
+
+    frac1 = fraclow[0]
+    frac2 = frachigh[frachigh.size-1]
+
+    jtemp = np.add(jlow+2)
+    y = np.zeros(N)
+    for idx in range(N):
+        y[idx] = sum(spectrum.data[jtemp[idx]:jhigh[idx]])
+
+    ya = (dfi/df)*(np.multiply(spectrum.data[jlow[:-1]+1],fraclow[:-1])+
+                    np.multiply(spectrum.daga[jhigh[:-1]+1],frachigh[:-1]+
+                        y[:-1]))
+    if (jhigh[N-1]>Ni-1):
+        yb = (dfi/df)*(spectrum.data(jlow[N-1]+1)*fraclow[N-1]+y[N-1])
+    else:
+        yb = (dfi/df)*(spectrum.data(jlow[N-1]+1)*fraclow[N-1]+
+                        spectrum.data(jhigh[N-1]+1*frachigh[N-1]+
+                            y[N]))
+    y = vstack(ya,yb)
+    return y
+
