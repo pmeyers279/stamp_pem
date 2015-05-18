@@ -96,11 +96,11 @@ def fftgram(timeseries,stride):
     # number of steps
     nsteps = 2*int(timeseries.size // stride)  - 1 
     # only get positive frequencies
-    nfreqs = int(fftlength*timeseries.sample_rate.value) / 2. 
+    nfreqs = int(fftlength*timeseries.sample_rate.value) - 1
     dtype = np.complex
     # initialize the spectrogram
     out = Spectrogram(np.zeros((nsteps,nfreqs),dtype=dtype),
-        name = timeseries.name,epoch=timeseries.epoch,f0=0,df=df,
+        name = timeseries.name,epoch=timeseries.epoch,f0=df/2,df=df/2,
         dt=dt,copy=True,unit=timeseries.unit/u.Hz**0.5,dtype=dtype)
     # stride through TimeSeries, recording FFTs as columns of Spectrogram
     out.starttimes = np.zeros(nsteps)
@@ -115,13 +115,7 @@ def fftgram(timeseries,stride):
             (np.multiply(stepseries.data,np.hanning(stepseries.data.size)),np.zeros(stepseries.size))
             )))*1/stride)
         # get the positive indices we want (start in middle, take very other)
-        idxs_freqs = np.arange(tempfft.size/2,tempfft.size,2)
-        idxs_fft = np.arange(tempfft.size/2,3*tempfft.size/4)
-        out.data[step] = tempfft[idxs_fft]
-        if step == 0:
-            # what are the frequencies we actually have??
-            out.frequencies = fft.fftshift(fft.fftfreq(
-                int(2*stride),1./timeseries.sample_rate.value))[idxs_freqs]
+        out.data[step] = tempfft[np.floor(tempfft.size/2)+1:]
     return out
 
 def psdgram(timeseries,stride,adjacent=1):
@@ -209,16 +203,20 @@ def csdgram(channel1,channel2,stride):
         raise TypeError('First arg is either TimeSeries or Spectrogram object')
     # clip off first 2 and last 2 segments to be consistent with psd 
     # calculation
-    out = np.multiply(fftgram1.data,np.conj(fftgram2.data)).T[2:-2]
+    out = np.multiply(fftgram1.data,np.conj(fftgram2.data))[2:-2]
     starttimes = fftgram2.starttimes[2:-2]
 
-
     csdname = 'csd spectrogram between %s and %s'%(fftgram1.name,fftgram2.name)
-    csdgram = Spectrogram(out,name=csdname,epoch=starttimes[0],df=fftgram1.df,
-        dt=fftgram1.dt,copy=True,unit=fftgram1.unit*fftgram2.unit)
-    csdgram.frequencies = fftgram1.frequencies
-    csdgram.starttimes = starttimes
-
+    out = Spectrogram(out,name=csdname,epoch=starttimes[0],df=fftgram1.df,
+        dt=fftgram1.dt,copy=True,unit=fftgram1.unit*fftgram2.unit,f0=fftgram1.f0)
+    df = fftgram1.df.value*2
+    f0 = fftgram1.f0.value*2
+    csdgram = Spectrogram(np.zeros((out.shape[0],out.shape[1]/2)),df=df,
+        dt = fftgram1.dt,copy=True,unit=out.unit,f0=f0,epoch=out.epoch)
+    
+    for ii in range(csdgram.shape[0]):
+        temp = Spectrum(out.data[ii],df=out.df,f0=out.f0,epoch=out.epoch)
+        csdgram[ii] = coarseGrain(temp,df,f0,np.floor(out.shape[1]/2.))
     return csdgram
 
 def stamp_sigma_gram(channel1,channel2,stride):
@@ -300,13 +298,15 @@ def window_factors(window1,window2):
             average of product of first and second
             halves of window1 and window2. 
     """
-    Nred = np.gcd(window1.size,window2.size)
+    Nred = window1.size
     if Nred==1:
         raise ValueError('windows are not compatible')
 
+    N1 = window1.size
+    N2 = window2.size
     # get reduced windows
-    window1red = window1[0:(N1-N1/Nred)]
-    window2red = window2[0:(N2-N2/Nred)]
+    window1red = window1[0:(N1-N1/Nred)+1]
+    window2red = window2[0:(N2-N2/Nred)+1]
     idx = int(np.floor(Nred/2.))
 
     w1w2bar = np.mean(np.multiply(window1red,window2red))
@@ -328,39 +328,38 @@ def coarseGrain(spectrum,f0,df,N):
         spectrumCG : Spectrum object
             output spectrum
     """
-    f0i = spectrum.frequencies[0]
-    dfi = spectrum.df
+    f0i = spectrum.f0.value
+    dfi = spectrum.df.value
     Ni = spectrum.size
     fhighi = f0i+(Ni-1)*dfi
     fhigh = f0+df*(N-1)
-    i = np.arange(0,Ny)
+    i = np.arange(0,N)
 
-    jlow = np.floor( (f0 + np.subtract(i,0.5)*df - f0i - 0.5*f0i)/dfi)
-    jhigh = np.floor( (f0 + np.add(i,0.5)*df - f0i - 0.5*f0i)/dfi)
+    # low/high indices for coarse=grain
+    jlow = 1+( (f0 + (i-0.5)*df - f0i - 0.5*f0i)/dfi)
+    jhigh = 1+( (f0 + (i+0.5)*df - f0i - 0.5*f0i)/dfi)
+    # fractional contribution of partial bins 
+    fraclow =  (dfi + (jlow+0.5)*dfi - f0 - (i-0.5)*df)/dfi
+    frachigh = (df + (i+0.5)*df - f0i - (jhigh-0.5)*dfi)/dfi
 
-    index1 = jlow[0]
-    index2 = jhigh[jhigh.size-1]
-
-    fraclow =  (dfi + np.add(jlow,0.5)/dfi - f0 - np.subtract(i,0.5)*df)/dfi
-    frachigh = (df + np.add(i,0.5)/df - f0 - np.subtract(jhigh,0.5)*dfi)/dfi
-
-    frac1 = fraclow[0]
-    frac2 = frachigh[frachigh.size-1]
-
-    jtemp = np.add(jlow+2)
-    y = np.zeros(N)
+    jtemp = jlow+2
+    y_real = np.zeros(N)
+    y_imag = np.zeros(N)
     for idx in range(N):
-        y[idx] = sum(spectrum.data[jtemp[idx]:jhigh[idx]])
+        y_real[idx] = sum(spectrum.data.real[jtemp[idx]-1:jhigh[idx]])
+        y_imag[idx] = sum(spectrum.data.imag[jtemp[idx]-1:jhigh[idx]])
+    y = np.vectorize(complex)(y_real,y_imag)
 
-    ya = (dfi/df)*(np.multiply(spectrum.data[jlow[:-1]+1],fraclow[:-1])+
-                    np.multiply(spectrum.daga[jhigh[:-1]+1],frachigh[:-1]+
+    ya = (dfi/df)*(np.multiply(spectrum.data[jlow[:-1].astype(int)-1],fraclow[:-1])+
+                    np.multiply(spectrum.data[jhigh[:-1].astype(int)-1],frachigh[:-1]+
                         y[:-1]))
     if (jhigh[N-1]>Ni-1):
-        yb = (dfi/df)*(spectrum.data(jlow[N-1]+1)*fraclow[N-1]+y[N-1])
+        yb = (dfi/df)*(spectrum.data[jlow[N-1]+1]*fraclow[N-1]+y[N-1])
     else:
-        yb = (dfi/df)*(spectrum.data(jlow[N-1]+1)*fraclow[N-1]+
-                        spectrum.data(jhigh[N-1]+1*frachigh[N-1]+
-                            y[N]))
-    y = vstack(ya,yb)
+        yb = (dfi/df)*(spectrum.data[jlow[N-1]+1]*fraclow[N-1]+
+                        spectrum.data[jhigh[N-1]+1]*frachigh[N-1]+
+                            y[N-1])
+    y = np.hstack((ya,yb))
+    y = Spectrum(y,df=df,f0=f0,epoch=spectrum.epoch,unit=spectrum.unit,name=spectrum.name)
     return y
 
