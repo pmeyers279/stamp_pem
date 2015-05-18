@@ -144,12 +144,11 @@ def psdgram(timeseries,stride,adjacent=1):
     # number of steps
     nsteps = 2*int(timeseries.size // stride) - 1
     # only get positive frequencies
-    nfreqs = int(fftlength*timeseries.sample_rate.value) / 2. + 1 
-    dtype = np.real
+    nfreqs = int(fftlength*timeseries.sample_rate.value) / 2. 
     # initialize the spectrogram
-    out = Spectrogram(np.zeros((nsteps,nfreqs),dtype=dtype),
+    out = Spectrogram(np.zeros((nsteps,nfreqs)),
         name = timeseries.name,epoch=timeseries.epoch,f0=0,df=df,
-        dt=dt,copy=True,unit=timeseries.unit/u.Hz,dtype=dtype)
+        dt=dt,copy=True,unit=timeseries.unit/u.Hz)
     # stride through TimeSeries, recording FFTs as columns of Spectrogram
     out.starttimes = np.zeros(nsteps)
     for step in range(nsteps):
@@ -237,24 +236,24 @@ def stamp_sigma_gram(channel1,channel2,stride):
             not normalized with window factors
     """
     if isinstance(channel1,TimeSeries):
-        psd1 = psdgram(channel1,stride)
+        psd1 = psdgram(channel1,stride).T[:-1].T
     elif isinstance(channel1,Spectrogram):
         psd1 - channel1
     else:
         raise TypeError('channel1 must be of correct type')
 
     if isinstance(channel2,TimeSeries):
-        psd2 = psdgram(channel2,stride)
+        psd2 = psdgram(channel2,stride).T[:-1].T
     elif isinstance(channel2,Spectrogram):
         psd2 - channel2
     else:
         raise TypeError('channel2 must be of correct type')
 
-    sigma_gram = np.power(psd1.df*np.multiply(psd1.data,psd2.data),-0.5)
+    sigma_gram = np.power(np.multiply(psd1.data,psd2.data)/psd1.df,0.5)
     sigma_gram_name = \
     'STAMP sigma spectrogram for %s and %s'%(psd1.name,psd2.name)
     # sqrt(df/(psd1*psd2)) -> units of power of some kind
-    sigma_gram_unit = (psd1.unit*psd2.unit/u.Hz)**-0.5
+    sigma_gram_unit = (psd1.unit*psd2.unit/u.Hz)**0.5
     sigma_gram = Spectrogram(sigma_gram,name=sigma_gram_name,df=psd1.df,
         dt=psd1.dt,unit=sigma_gram_unit,copy=True,epoch=psd1.epoch)
     return sigma_gram
