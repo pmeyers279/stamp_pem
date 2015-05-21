@@ -238,24 +238,25 @@ def stamp_sigma_gram(channel1,channel2,stride):
     if isinstance(channel1,TimeSeries):
         psd1 = psdgram(channel1,stride).T[:-1].T
     elif isinstance(channel1,Spectrogram):
-        psd1 - channel1
+        psd1 = channel1
     else:
         raise TypeError('channel1 must be of correct type')
 
     if isinstance(channel2,TimeSeries):
         psd2 = psdgram(channel2,stride).T[:-1].T
     elif isinstance(channel2,Spectrogram):
-        psd2 - channel2
+        psd2 = channel2
     else:
         raise TypeError('channel2 must be of correct type')
 
-    sigma_gram = np.power(np.multiply(psd1.data,psd2.data)/psd1.df,0.5)
-    sigma_gram_name = \
-    'STAMP sigma spectrogram for %s and %s'%(psd1.name,psd2.name)
-    # sqrt(df/(psd1*psd2)) -> units of power of some kind
-    sigma_gram_unit = (psd1.unit*psd2.unit/u.Hz)**0.5
-    sigma_gram = Spectrogram(sigma_gram,name=sigma_gram_name,df=psd1.df,
-        dt=psd1.dt,unit=sigma_gram_unit,copy=True,epoch=psd1.epoch)
+    sigma_gram = (sensint(psd1,psd2,stride)*psd1.df)**-1
+    # sigma_gram = np.power(np.multiply(psd1.data,psd2.data)/psd1.df,0.5)
+    # sigma_gram_name = \
+    # 'STAMP sigma spectrogram for %s and %s'%(psd1.name,psd2.name)
+    # # sqrt(df/(psd1*psd2)) -> units of power of some kind
+    # sigma_gram_unit = (psd1.unit*psd2.unit/u.Hz)**0.5
+    # sigma_gram = Spectrogram(sigma_gram,name=sigma_gram_name,df=psd1.df,
+    #     dt=psd1.dt,unit=sigma_gram_unit,copy=True,epoch=psd1.epoch)
     return sigma_gram
 
 def cal_ccvar(sig):
@@ -274,7 +275,7 @@ def cal_ccvar(sig):
     ------
         Errors : description
     """
-    ccVar = np.sum(sig.data,axis=1)*sig.df
+    ccVar = np.sum(np.power(sig.data,2),axis=1)*sig.df
     ccVar = TimeSeries(ccVar,name='cc variance time series',
         unit=sig.unit*u.Hz,dt=sig.dt,copy=True,epoch=sig.epoch)
     
@@ -361,4 +362,38 @@ def coarseGrain(spectrum,f0,df,N):
     y = np.hstack((ya,yb))
     y = Spectrum(y,df=df,f0=f0,epoch=spectrum.epoch,unit=spectrum.unit,name=spectrum.name)
     return y
+
+def sens_int(channel1,channel2,stride):
+    """calculate sensitivity integrand of cc
+    calculation for channels 1 and 2 based on stride chosen
+    Parameters
+    ----------
+        channel1 : TimeSeries or Spectrogram object
+            psd spectrogram or time series for DARM
+        channel2 : TimeSeries or Spectrogram object
+            psd spectrogram or time series for AUX channel
+    Returns
+    -------
+        sensit : Spectrogram object
+            sensitivity integrand for cc calculation
+    Raises
+    ------
+        Errors : description
+    """
+    if isinstance(channel1,TimeSeries):
+        psd1 = psdgram(channel1,stride).T[:-1].T
+    elif isinstance(channel1,Spectrogram):
+        psd1 = channel1
+    else:
+        raise TypeError('channel1 must be of correct type')
+
+    if isinstance(channel2,TimeSeries):
+        psd2 = psdgram(channel2,stride).T[:-1].T
+    elif isinstance(channel2,Spectrogram):
+        psd2 = channel2
+    else:
+        raise TypeError('channel2 must be of correct type')
+    sensint = (psd1*psd2)**-1
+
+    return sensint
 
