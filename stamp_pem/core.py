@@ -4,17 +4,17 @@ from gwpy.spectrum import Spectrum
 from glue import datafind
 from gwpy.spectrogram import Spectrogram
 import numpy as np
-import scipy.fftpack as fft 
+import scipy.fftpack as fft
 from astropy import units as u
 
 # ---------------------------------
 # RETRIEVING DATA FUNCTIONS
 # ---------------------------------
-def datafind(ifo,type,starttime,endtime,urltype='file'):
+def datafind2(ifo, type, starttime, endtime, urltype='file'):
     """uses glue datafind to get ifo data
     Parameters
     ----------
-        ifo : str 
+        ifo : str
             single letter identifier for ifo
             L,H,G,V,K
         starttime : int
@@ -28,13 +28,13 @@ def datafind(ifo,type,starttime,endtime,urltype='file'):
             a list of cache entry representations of
             individual frame files.
     Raises
-    ------ 
+    ------
     """
     connection = datafind.GWDataFindHTTPConnection()
-    cache = connection.find_frame_urls(ifo,type,starttime,endtime,urltype=urltype)
+    cache = connection.find_frame_urls(ifo, type, starttime, endtime, urltype=urltype)
     return cache
 
-def retrieve_time_series(cache,channel):
+def retrieve_time_series(cache, channel):
     """retrieve time series data using gwpy.TimeSeries
     given cache object and channel
     Parameters
@@ -48,19 +48,19 @@ def retrieve_time_series(cache,channel):
     -------
         data : gwpy time series object
     Raises
-    ------ 
+    ------
     """
-    data = TimeSeries.read(cache,channel)
+    data = TimeSeries.read(cache, channel)
     return data
 
-def retrieve_time_series_dict(cache,channelList):
+def retrieve_time_series_dict(cache, channelList):
     """retrieve data for a list of channels
     Parameters
     ----------
         cache : cache object
             cache object point to frame files
             to read
-        channelList : list 
+        channelList : list
             list of channels to get data for
     Returns
     -------
@@ -68,13 +68,13 @@ def retrieve_time_series_dict(cache,channelList):
             dictionary with channel names as keys
             and time series objects as values
     """
-    dataDict = TimeSeriesDict.read(cache,channelList)
+    dataDict = TimeSeriesDict.read(cache, channelList)
     return dataDict
 
 # -----------------------------------------
 # ANALYSIS FUNCTIONS
 # -----------------------------------------
-def fftgram(timeseries,stride):
+def fftgram(timeseries, stride):
     """calculates fourier-gram with zero
     padding
     Parameters
@@ -94,12 +94,12 @@ def fftgram(timeseries,stride):
     # number of values in a step
     stride *= timeseries.sample_rate.value
     # number of steps
-    nsteps = 2*int(timeseries.size // stride)  - 1 
+    nsteps = 2*int(timeseries.size // stride)  - 1
     # only get positive frequencies
     nfreqs = int(fftlength*timeseries.sample_rate.value) - 1
     dtype = np.complex
     # initialize the spectrogram
-    out = Spectrogram(np.zeros((nsteps,nfreqs),dtype=dtype),
+    out = Spectrogram(np.zeros((nsteps, nfreqs),dtype=dtype),
         name = timeseries.name,epoch=timeseries.epoch,f0=df/2,df=df/2,
         dt=dt,copy=True,unit=timeseries.unit/u.Hz**0.5,dtype=dtype)
     # stride through TimeSeries, recording FFTs as columns of Spectrogram
@@ -146,34 +146,34 @@ def psdgram(timeseries,stride,adjacent=1):
     # only get positive frequencies
     nfreqs = int(fftlength*timeseries.sample_rate.value) / 2. 
     # initialize the spectrogram
-    out = Spectrogram(np.zeros((nsteps,nfreqs)),
+    out = Spectrogram(np.zeros((nsteps, nfreqs)),
         name = timeseries.name,epoch=timeseries.epoch,f0=0,df=df,
-        dt=dt,copy=True,unit=timeseries.unit/u.Hz)
+        dt=dt,copy=True,unit=timeseries.unit / u.Hz)
     # stride through TimeSeries, recording FFTs as columns of Spectrogram
     out.starttimes = np.zeros(nsteps)
     for step in range(nsteps):
         # indexes for this step
         idx = (stride/2) * step
         idx_end = idx + stride
-        out.starttimes[step]=(idx/stride)+timeseries.epoch.value
+        out.starttimes[step] = (idx / stride) + timeseries.epoch.value
         stepseries = timeseries[idx:idx_end]
         out[step] = stepseries.psd()[:-1]
 
-    psdleft = np.hstack((out.data.T,np.zeros((out.data.shape[1],4))))
-    psdright = np.hstack((np.zeros((out.data.shape[1],4)),out.data.T))
+    psdleft = np.hstack((out.data.T, np.zeros((out.data.shape[1], 4))))
+    psdright = np.hstack((np.zeros((out.data.shape[1], 4)), out.data.T))
     # psd we want is average of adjacent, non-ovlped segs. don't include
     # middle segment for now. throw away edges.
-    psd = np.divide(np.add(psdleft,psdright),2).T[4:-4]
-    psd = Spectrogram(psd,name=out.name,epoch=out.epoch,
-        f0=out.f0,df=out.df,dt=out.dt,
-        copy=True,unit=out.unit)
+    psd = np.divide(np.add(psdleft, psdright),2).T[4:-4]
+    psd = Spectrogram(psd, name=out.name, epoch=out.epoch,
+        f0=out.f0, df=out.df, dt=out.dt,
+        copy=True, unit=out.unit)
     # recall we're throwing away first and last 2 segments. 
     # to be able to do averaging
     psd.starttimes = out.starttimes[2:-2]
     psd.frequencies = out.frequencies
     return psd
 
-def csdgram(channel1,channel2,stride):
+def csdgram(channel1, channel2, stride):
     """calculates csd spectrogram between two timeseries
     or fftgrams. Allows for flexibility for holding DARM
     fftgram in memory while looping over others.
@@ -188,21 +188,21 @@ def csdgram(channel1,channel2,stride):
         csdgram : spectrogram object
             csd spectrogram for two objects
     """
-    if isinstance(channel1,TimeSeries):
-        fftgram1 = fftgram(channel1,stride)
-    elif isinstance(channel1,Spectrogram): 
+    if isinstance(channel1, TimeSeries):
+        fftgram1 = fftgram(channel1, stride)
+    elif isinstance(channel1, Spectrogram):
         fftgram1 = channel1
-    else: 
+    else:
         raise TypeError('First arg is either TimeSeries or Spectrogram object')
-    if isinstance(channel2,TimeSeries):
-        fftgram2 = fftgram(channel2,stride)
-    elif isinstance(channel2,Spectrogram): 
+    if isinstance(channel2, TimeSeries):
+        fftgram2 = fftgram(channel2, stride)
+    elif isinstance(channel2, Spectrogram):
         fftgram2 = channel2
-    else: 
+    else:
         raise TypeError('First arg is either TimeSeries or Spectrogram object')
-    # clip off first 2 and last 2 segments to be consistent with psd 
+    # clip off first 2 and last 2 segments to be consistent with psd
     # calculation
-    out = np.multiply(fftgram1.data,np.conj(fftgram2.data))[2:-2]
+    out = np.multiply(fftgram1.data, np.conj(fftgram2.data))[2:-2]
     starttimes = fftgram2.starttimes[2:-2]
 
     csdname = 'csd spectrogram between %s and %s'%(fftgram1.name,fftgram2.name)
