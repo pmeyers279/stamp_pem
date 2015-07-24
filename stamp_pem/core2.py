@@ -53,7 +53,7 @@ def fftgram(timeseries, stride, pad=False):
                                  np.hanning(stepseries.value.size))
         # take fft
         if pad:
-            stepseries = TimeSeries(np.hstack((stepseries,np.zeros(stepseries.size))),
+            stepseries = TimeSeries(np.hstack((stepseries, np.zeros(stepseries.size))),
                                     name=stepseries.name, x0=stepseries.x0,
                                     dx=timeseries.dx)
             tempfft = stepseries.fft(stepseries.size)
@@ -68,7 +68,7 @@ def fftgram(timeseries, stride, pad=False):
 
 def psdgram(timeseries, stride, adjacent=1):
     """
-    calculates PSD from timeseries
+    calculates one-sided PSD from timeseries
     properly using welch's method by averaging adjacent non-ovlping
     segments. Since default fftgram overlaps segments
     we have to be careful here...
@@ -114,10 +114,9 @@ def psdgram(timeseries, stride, adjacent=1):
 
     psdleft = np.hstack((out.T, np.zeros((out.shape[1], 4))))
     psdright = np.hstack((np.zeros((out.shape[1], 4)), out.T))
-    # psd we want is average of adjacent, non-ovlped segs. don't include
-    # middle segment for now. throw away edges.
     psd_temp = ((psdleft + psdright) / 2).T
-    psd = Spectrogram(psd_temp.value[4:-4],
+    # create spectrogram object. multiply by 2 for one-sided.
+    psd = Spectrogram(2 * psd_temp.value[4:-4],
                       name=timeseries.name, epoch=timeseries.epoch.value +
                       2 * dt,
                       f0=df, df=df, dt=dt, copy=True,
@@ -217,7 +216,7 @@ def coarseGrain(spectrum, f0, df, N):
 
 def csdgram(channel1, channel2, stride):
     """
-    calculates csd spectrogram between two timeseries
+    calculates one-sided csd spectrogram between two timeseries
     or fftgrams. Allows for flexibility for holding DARM
     fftgram in memory while looping over others.
     Parameters
@@ -252,18 +251,98 @@ def csdgram(channel1, channel2, stride):
         fftgram1.name, fftgram2.name)
     out = Spectrogram(out, name=csdname,
                       epoch=fftgram1.epoch.value + 2 * fftgram1.dt.value,
-                      df=fftgram1.df, dt=fftgram1.dt, copy=True, 
+                      df=fftgram1.df, dt=fftgram1.dt, copy=True,
                       unit=fftgram1.unit * fftgram2.unit, f0=fftgram1.f0)
     df = fftgram1.df.value * 2
     f0 = fftgram1.f0.value * 2
-    csdgram = Spectrogram(np.zeros((out.shape[0], out.shape[1] / 2),dtype=np.complex), df=df,
+    csdgram = Spectrogram(np.zeros((out.shape[0], out.shape[1] / 2), dtype=np.complex), df=df,
                           dt=fftgram1.dt, copy=True, unit=out.unit, f0=f0,
                           epoch=out.epoch)
 
     for ii in range(csdgram.shape[0]):
-        temp = Spectrum(out.data[ii], df=out.df, f0=out.f0, epoch=out.epoch,
+        # multiply by 2 for one-sided spectrum
+        temp = Spectrum(2 * out.data[ii], df=out.df, f0=out.f0, epoch=out.epoch,
                         unit=out.unit)
         N = out.shape[1] / 2
         csdgram[ii] = coarseGrain(temp, df, f0, N)
 
     return csdgram
+
+
+def stamp_variance(channel1, channel2, stride):
+    """
+    calculates stamp-pem variance from two time-series.
+    Parameters
+    ----------
+        channel1 : TimeSeries or Spectrogram object
+            timeseries or PSD for channel 1
+        channel2 : TimeSeries or Spectrogram object
+            timeseries or PSD for channel 2
+        stride : int
+            fft stride
+    Returns
+    -------
+        stamp variance : Spectrogram object
+    """
+    # set units
+    if isinstance(channel1, TimeSeries):
+        psd1 = psdgram(channel1, stride)
+    else:
+        psd1 = channel1
+    if isinstance(channel2, TimeSeries):
+        psd2 = psdgram(channel2, stride)
+    else:
+        psd2 = channel2
+    # set units
+    if psd1.unit and psd2.unit:
+        var_unit = psd1.unit * psd2.unit
+    else:
+        var_unit = (u.Hz)**-2
+    variance = Spectrogram(0.5 * psd1.value * psd2.value,
+                           epoch=psd1.epoch, dt=psd1.dt,
+                           copy=True, unit=var_unit, f0=psd1.f0,
+                           df=psd1.df)
+    return variance
+
+
+def stamp_y(channel1, channel2, stride):
+    """
+    calculates stamp statistic, Y, from two fftgrams
+    or two timeseries
+    Parameters
+    ----------
+        channel1 : TimeSeries or Spectrogram object
+            timeseries or fft spectrogram for channel 1
+        channel2 : TimeSeries or Spectrogram object
+            timeseries or fft spectrogram for channel 2
+
+    Returns
+    -------
+        y : Spectrogram object
+            stamp point estimate
+    """
+    return 2*np.real(csdgram(channel1,channel2,stride))
+
+
+def stamp_snr(channel1, channel2, stride):
+    """
+    calculates stamp snr
+    Parameters
+    ----------
+        channel1 : TimeSeries
+            channel1 timeseries
+        channel2 : TimeSeries
+            channel2 TimeSeries
+
+    Returns
+    -------
+        snr : Spectrogram
+            stamp snr spectrogram
+    """
+    y = stamp_y(channel1, channel2, stride)
+    variance = stamp_variance(channel1, channel2, stride)
+    snr = Spectrogram(y.value / variance.value**0.5,
+                      unit=None, dt=y.dt, f0=y.f0,
+                      df=y.df, epoch=y.epoch, copy=True)
+    return snr
+
