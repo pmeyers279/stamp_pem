@@ -1,5 +1,4 @@
 from gwpy.timeseries import TimeSeries
-from gwpy.timeseries import TimeSeriesDict
 from gwpy.spectrum import Spectrum
 from glue import datafind
 from gwpy.spectrogram import Spectrogram
@@ -53,14 +52,15 @@ def fftgram(timeseries, stride, pad=False):
                                  np.hanning(stepseries.value.size))
         # take fft
         if pad:
-            stepseries = TimeSeries(np.hstack((stepseries, np.zeros(stepseries.size))),
+            stepseries = TimeSeries(np.hstack((stepseries,
+                                               np.zeros(stepseries.size))),
                                     name=stepseries.name, x0=stepseries.x0,
                                     dx=timeseries.dx)
             tempfft = stepseries.fft(stepseries.size)
         else:
             tempfft = stepseries.fft(stepseries.size)
         tempfft.override_unit(out.unit)
-
+        # get rid of dc part.
         out[step] = tempfft[1:]
 
     return out
@@ -321,7 +321,7 @@ def stamp_y(channel1, channel2, stride):
         y : Spectrogram object
             stamp point estimate
     """
-    return 2*np.real(csdgram(channel1,channel2,stride))
+    return 2 * np.real(csdgram(channel1, channel2, stride))
 
 
 def stamp_snr(channel1, channel2, stride):
@@ -345,4 +345,3 @@ def stamp_snr(channel1, channel2, stride):
                       unit=None, dt=y.dt, f0=y.f0,
                       df=y.df, epoch=y.epoch, copy=True)
     return snr
-
