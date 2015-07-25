@@ -74,8 +74,8 @@ def psdgram(timeseries, stride, adjacent=1):
     we have to be careful here...
     Parameters
     ----------
-        fftgram : Spectrogram object
-            complex fftgram
+        timeseries : timeseries object
+            timeseries to create pdsgram 
         adjacent : `int`
             number of adjacent segments
             to calculate PSD of middle segment
@@ -116,7 +116,7 @@ def psdgram(timeseries, stride, adjacent=1):
     psdright = np.hstack((np.zeros((out.shape[1], 4)), out.T))
     psd_temp = ((psdleft + psdright) / 2).T
     # create spectrogram object. multiply by 2 for one-sided.
-    psd = Spectrogram(2 * psd_temp.value[4:-4],
+    psd = Spectrogram(psd_temp.value[4:-4],
                       name=timeseries.name, epoch=timeseries.epoch.value +
                       2 * dt,
                       f0=df, df=df, dt=dt, copy=True,
@@ -140,7 +140,7 @@ def window_factors(window1, window2):
             average of product of squares of windows
         w1w2ovlsquaredbar : array
             average of product of first and second
-            halves of window1 and window2. 
+            halves of window1 and window2.
     """
 
     Nred = window1.size
@@ -194,19 +194,20 @@ def coarseGrain(spectrum, f0, df, N):
     y_real = np.zeros(N)
     y_imag = np.zeros(N)
     for idx in range(N):
-        y_real[idx] = sum(spectrum.data.real[jtemp[idx] - 1:jhigh[idx]])
-        y_imag[idx] = sum(spectrum.data.imag[jtemp[idx] - 1:jhigh[idx]])
+        y_real[idx] = sum(spectrum.value.real[jtemp[idx] - 1:jhigh[idx]])
+        y_imag[idx] = sum(spectrum.value.imag[jtemp[idx] - 1:jhigh[idx]])
     y = np.vectorize(complex)(y_real, y_imag)
 
-    ya = (dfi / df) * (np.multiply(spectrum.data[jlow[:-1].astype(int) - 1], fraclow[:-1]) +
-                       np.multiply(spectrum.data[jhigh[:-1].astype(int) - 1], frachigh[:-1] +
-                                   y[:-1]))
+    ya = (dfi / df) * (np.multiply(spectrum.value[jlow[:-1].astype(int) - 1],
+                                   fraclow[:-1]) +
+                       np.multiply(spectrum.value[jhigh[:-1].astype(int) - 1],
+                                   frachigh[:-1] + y[:-1]))
     if (jhigh[N - 1] > Ni - 1):
         yb = (dfi / df) * \
-            (spectrum.data[jlow[N - 1] + 1] * fraclow[N - 1] + y[N - 1])
+            (spectrum.value[jlow[N - 1] + 1] * fraclow[N - 1] + y[N - 1])
     else:
-        yb = (dfi / df) * (spectrum.data[jlow[N - 1] + 1] * fraclow[N - 1] +
-                           spectrum.data[jhigh[N - 1] + 1] * frachigh[N - 1] +
+        yb = (dfi / df) * (spectrum.value[jlow[N - 1] + 1] * fraclow[N - 1] +
+                           spectrum.value[jhigh[N - 1] + 1] * frachigh[N - 1] +
                            y[N - 1])
     y = np.hstack((ya, yb))
     y = Spectrum(y, df=df, f0=f0, epoch=spectrum.epoch, unit=spectrum.unit,
@@ -255,16 +256,18 @@ def csdgram(channel1, channel2, stride):
                       unit=fftgram1.unit * fftgram2.unit, f0=fftgram1.f0)
     df = fftgram1.df.value * 2
     f0 = fftgram1.f0.value * 2
-    csdgram = Spectrogram(np.zeros((out.shape[0], out.shape[1] / 2), dtype=np.complex), df=df,
+    csdgram = Spectrogram(np.zeros((out.shape[0], out.shape[1] / 2),
+                                   dtype=np.complex), df=df,
                           dt=fftgram1.dt, copy=True, unit=out.unit, f0=f0,
                           epoch=out.epoch)
 
     for ii in range(csdgram.shape[0]):
         # multiply by 2 for one-sided spectrum
-        temp = Spectrum(2 * out.data[ii], df=out.df, f0=out.f0, epoch=out.epoch,
+        temp = Spectrum(2 * out.value[ii], df=out.df,
+                        f0=out.f0, epoch=out.epoch,
                         unit=out.unit)
         N = out.shape[1] / 2
-        csdgram[ii] = coarseGrain(temp, df, f0, N)
+        csdgram[ii] = coarseGrain(temp, df, f0, int(N))
 
     return csdgram
 
