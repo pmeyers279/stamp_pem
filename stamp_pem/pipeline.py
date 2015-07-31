@@ -47,7 +47,6 @@ if not params.fhigh:
     params.fhigh = channel1.sample_rate.value / 2.
 
 while (max_freq - params.fhigh) > (params.fhigh):
-    print max_freq
     new_dec += 1
     max_freq *= 0.5
 if (new_dec - 1):
@@ -56,20 +55,25 @@ if (new_dec - 1):
 
 snr = pem.stamp_snr(channel1, channel2, params.sd, deltaF=params.df)
 print("--- %s seconds ---" % (time.time() - start_time))
-# p1 = pem.psdgram(channel1, params.sd, deltaF=params.df)
-# p2 = pem.psdgram(channel2, params.sd, deltaF=params.df)
+p1 = pem.psdgram(channel1, params.sd, deltaF=params.df)
+p2 = pem.psdgram(channel2, params.sd, deltaF=params.df)
 
-# plot = snr.plot(vmin=-5, vmax=5)
-# plot.add_colorbar(label='STAMP SNR')
-# plot.show()
+snr2 = snr**2
 
-# plot = p1.plot(vmin=p1.value.min(), vmax=p1.value.max(), norm='log')
-# plot.add_colorbar(label='power')
-# plot.show()
+plot = snr2.plot(vmin=-15, vmax=15)
+plot.add_colorbar(label='STAMP SNR')
+plot.set_ylim(0, params.fhigh)
+plot.show()
 
-# plot = p2.plot(vmin=p2.value.min(), vmax=p2.value.max(), norm='log')
-# plot.add_colorbar(label='power')
-# plot.show()
+plot = p1.plot(vmin=p1.value.min(), vmax=p1.value.max(), norm='log')
+plot.add_colorbar(label='power')
+plot.set_ylim(0, params.fhigh)
+plot.show()
+
+plot = p2.plot(vmin=p2.value.min(), vmax=p2.value.max(), norm='log')
+plot.add_colorbar(label='power')
+plot.set_ylim(0, params.fhigh)
+plot.show()
 
 # N = 2.
 # sigma1 = 1.

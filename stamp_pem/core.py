@@ -367,8 +367,9 @@ def stamp_snr(channel1, channel2, stride, deltaF=None):
 
     # calculate y
     y = stamp_y(channel1, channel2, stride, deltaF=deltaF)
-    y_final = Spectrogram(np.zeros((variance.shape[0],variance.shape[1])), df=variance.df, f0=variance.f0,
-                    epoch=variance.epoch, dt=variance.dt, unit=y.unit)
+    y_final = Spectrogram(np.zeros((variance.shape[0],variance.shape[1])),
+    					  df=variance.df, f0=variance.f0,
+	                      epoch=variance.epoch, dt=variance.dt, unit=y.unit)
     if not deltaF == 1. / stride:
         for ii in range(y.shape[0]):
             # multiply by 2 for one-sided spectrum
@@ -390,7 +391,7 @@ def stamp_snr(channel1, channel2, stride, deltaF=None):
         variance = variance[:,:-diff]
 
     snr = multiplicative_factor * Spectrogram(y_final.value / variance.value**0.5,
-                                              unit=None, dt=y_final.dt, f0=y_final.f0,
+                                              unit=None, dt=y_final.dt / 2., f0=y_final.f0,
                                               df=y_final.df, epoch=y_final.epoch,
                                               copy=True)
     return snr
