@@ -1,12 +1,11 @@
 from gwpy.timeseries import TimeSeries
 from gwpy.spectrum import Spectrum
-from glue import datafind
 from gwpy.spectrogram import Spectrogram
 import numpy as np
 from astropy import units as u
 
 
-def fftgram(timeseries, stride, pad=False):
+def fftgram(timeseries, stride, pad=False, deltaF=None):
     """
     calculates fourier-gram with automatic
     50% overlapping hann windowing.
@@ -21,24 +20,22 @@ def fftgram(timeseries, stride, pad=False):
         fftgram : gwpy spectrogram
             a fourier-gram
     """
-
-    fftlength = stride
+    df = 1. / stride
     dt = stride
-    df = 1. / fftlength
     # number of values in a step
     stride *= timeseries.sample_rate.value
     # number of steps
     nsteps = 2 * int(timeseries.size // stride) - 1
     # only get positive frequencies
     if pad:
-        nfreqs = int(fftlength * timeseries.sample_rate.value)
+        nfreqs = int(1. / df * timeseries.sample_rate.value)
     else:
-        nfreqs = int(fftlength * timeseries.sample_rate.value) / 2
+        nfreqs = int(1. / df * timeseries.sample_rate.value) / 2
     dtype = np.complex
     # initialize the spectrogram
     out = Spectrogram(np.zeros((nsteps, nfreqs), dtype=dtype),
                       name=timeseries.name, epoch=timeseries.epoch,
-                      f0=df / 2, df=df / 2, dt=dt, copy=True,
+                      f0=df / 2., df=df / 2., dt=dt, copy=True,
                       unit=1 / u.Hz**0.5, dtype=dtype)
     # stride through TimeSeries, recording FFTs as columns of Spectrogram
     for step in range(nsteps):
@@ -61,12 +58,14 @@ def fftgram(timeseries, stride, pad=False):
             tempfft = stepseries.fft(stepseries.size)
         tempfft.override_unit(out.unit)
         # get rid of dc part.
-        out[step] = tempfft[1:]
+        tempfft = tempfft[1:]
+
+        out[step] = tempfft
 
     return out
 
 
-def psdgram(timeseries, stride, adjacent=1):
+def psdgram(timeseries, stride, adjacent=1, deltaF=None):
     """
     calculates one-sided PSD from timeseries
     properly using welch's method by averaging adjacent non-ovlping
@@ -75,7 +74,7 @@ def psdgram(timeseries, stride, adjacent=1):
     Parameters
     ----------
         timeseries : timeseries object
-            timeseries to create pdsgram 
+            timeseries to create pdsgram
         adjacent : `int`
             number of adjacent segments
             to calculate PSD of middle segment
@@ -85,15 +84,20 @@ def psdgram(timeseries, stride, adjacent=1):
             psd spectrogram calculated in
             spirit of STAMP/stochastic
     """
-    fftlength = stride
     dt = stride
-    df = 1. / fftlength
+    if not deltaF:
+        deltaF = 1. / stride
+    min_df = 1. / stride
+    df = deltaF
     # number of values in a step
     stride *= timeseries.sample_rate.value
     # number of steps
     nsteps = 2 * int(timeseries.size // stride) - 1
     # only get positive frequencies
-    nfreqs = int(fftlength * timeseries.sample_rate.value) / 2.
+    if not (min_df == deltaF):
+        nfreqs = int(1. / deltaF * timeseries.sample_rate.value) / 2 - 1.
+    else:
+        nfreqs = int(1. / deltaF * timeseries.sample_rate.value) / 2
     # initialize the spectrogram
     if timeseries.unit:
         unit = timeseries.unit / u.Hz
@@ -110,6 +114,8 @@ def psdgram(timeseries, stride, adjacent=1):
         idx_end = idx + stride
         stepseries = timeseries[idx:idx_end]
         steppsd = stepseries.psd()[1:]
+        if not steppsd.df.value == deltaF:
+            steppsd = coarseGrain(steppsd, deltaF, deltaF, int(nfreqs))
         out.value[step, :] = steppsd.value
 
     psdleft = np.hstack((out.T, np.zeros((out.shape[1], 4))))
@@ -179,11 +185,23 @@ def coarseGrain(spectrum, f0, df, N):
     f0i = spectrum.f0.value
     dfi = spectrum.df.value
     Ni = spectrum.size
+    freqs = np.arange(f0,spectrum.frequencies.value[-1],df)
     fhighi = f0i + (Ni - 1) * dfi
     fhigh = f0 + df * (N - 1)
+    shaved = False
+    if ((fhigh + 0.5 * df) > (fhighi + 0.5 * dfi)) and ((fhigh + 0.5 * df) - (fhighi + 0.5 * dfi))<df:
+        N = N-1
+        fhigh = f0+df*(N-1)
+        shaved = True
+    elif ((fhigh + 0.5 * df) > (fhighi + 0.5 * dfi)) and not ((fhigh + 0.5 * df) - (fhighi + 0.5 * dfi))<df:
+        print 'we want: ' + str(fhigh + 0.5 * df)
+        print 'we can get: ' + str(fhighi + 0.5 * dfi)
+        raise ValueError('desired coarseGrain stop frequency too high')
+
+
     i = np.arange(0, N)
 
-    # low/high indices for coarse=grain
+    # low/high indices for coarsegrain
     jlow = 1 + ((f0 + (i - 0.5) * df - f0i - 0.5 * f0i) / dfi)
     jhigh = 1 + ((f0 + (i + 0.5) * df - f0i - 0.5 * f0i) / dfi)
     # fractional contribution of partial bins
@@ -204,10 +222,10 @@ def coarseGrain(spectrum, f0, df, N):
                                    frachigh[:-1] + y[:-1]))
     if (jhigh[N - 1] > Ni - 1):
         yb = (dfi / df) * \
-            (spectrum.value[jlow[N - 1] + 1] * fraclow[N - 1] + y[N - 1])
+            (spectrum.value[jlow[N - 1].astype(int)] * fraclow[N - 1].astype(int) + y[N - 1])
     else:
-        yb = (dfi / df) * (spectrum.value[jlow[N - 1] + 1] * fraclow[N - 1] +
-                           spectrum.value[jhigh[N - 1] + 1] * frachigh[N - 1] +
+        yb = (dfi / df) * (spectrum.value[jlow[N - 1].astype(int)] * fraclow[N - 1] +
+                           spectrum.value[jhigh[N - 1].astype(int)] * frachigh[N - 1] +
                            y[N - 1])
     y = np.hstack((ya, yb))
     y = Spectrum(y, df=df, f0=f0, epoch=spectrum.epoch, unit=spectrum.unit,
@@ -215,7 +233,7 @@ def coarseGrain(spectrum, f0, df, N):
     return y
 
 
-def csdgram(channel1, channel2, stride):
+def csdgram(channel1, channel2, stride, deltaF=None):
     """
     calculates one-sided csd spectrogram between two timeseries
     or fftgrams. Allows for flexibility for holding DARM
@@ -243,6 +261,8 @@ def csdgram(channel1, channel2, stride):
         fftgram2 = channel2
     else:
         raise TypeError('First arg is either TimeSeries or Spectrogram object')
+    if not deltaF:
+        deltaF = 1. / stride
 
     # clip off first 2 and last 2 segments to be consistent with psd
     # calculation
@@ -256,7 +276,7 @@ def csdgram(channel1, channel2, stride):
                       unit=fftgram1.unit * fftgram2.unit, f0=fftgram1.f0)
     df = fftgram1.df.value * 2
     f0 = fftgram1.f0.value * 2
-    csdgram = Spectrogram(np.zeros((out.shape[0], out.shape[1] / 2),
+    csdgram = Spectrogram(np.zeros((out.shape[0], out.shape[1] / 2 - 1),
                                    dtype=np.complex), df=df,
                           dt=fftgram1.dt, copy=True, unit=out.unit, f0=f0,
                           epoch=out.epoch)
@@ -272,7 +292,7 @@ def csdgram(channel1, channel2, stride):
     return csdgram
 
 
-def stamp_variance(channel1, channel2, stride):
+def stamp_variance(channel1, channel2, stride, deltaF=None):
     """
     calculates stamp-pem variance from two time-series.
     Parameters
@@ -289,11 +309,11 @@ def stamp_variance(channel1, channel2, stride):
     """
     # set units
     if isinstance(channel1, TimeSeries):
-        psd1 = psdgram(channel1, stride)
+        psd1 = psdgram(channel1, stride, deltaF=deltaF)
     else:
         psd1 = channel1
     if isinstance(channel2, TimeSeries):
-        psd2 = psdgram(channel2, stride)
+        psd2 = psdgram(channel2, stride, deltaF=deltaF)
     else:
         psd2 = channel2
     # set units
@@ -308,7 +328,7 @@ def stamp_variance(channel1, channel2, stride):
     return variance
 
 
-def stamp_y(channel1, channel2, stride):
+def stamp_y(channel1, channel2, stride, deltaF=None):
     """
     calculates stamp statistic, Y, from two fftgrams
     or two timeseries
@@ -324,10 +344,10 @@ def stamp_y(channel1, channel2, stride):
         y : Spectrogram object
             stamp point estimate
     """
-    return 2 * np.real(csdgram(channel1, channel2, stride))
+    return 2 * np.real(csdgram(channel1, channel2, stride, deltaF=deltaF))
 
 
-def stamp_snr(channel1, channel2, stride):
+def stamp_snr(channel1, channel2, stride, deltaF=None):
     """
     calculates stamp snr
     Parameters
@@ -342,9 +362,35 @@ def stamp_snr(channel1, channel2, stride):
         snr : Spectrogram
             stamp snr spectrogram
     """
-    y = stamp_y(channel1, channel2, stride)
-    variance = stamp_variance(channel1, channel2, stride)
-    snr = Spectrogram(y.value / variance.value**0.5,
-                      unit=None, dt=y.dt, f0=y.f0,
-                      df=y.df, epoch=y.epoch, copy=True)
+    # calculate variance
+    variance = stamp_variance(channel1, channel2, stride, deltaF=deltaF)
+
+    # calculate y
+    y = stamp_y(channel1, channel2, stride, deltaF=deltaF)
+    y_final = Spectrogram(np.zeros((variance.shape[0],variance.shape[1])), df=variance.df, f0=variance.f0,
+                    epoch=variance.epoch, dt=variance.dt, unit=y.unit)
+    if not deltaF == 1. / stride:
+        for ii in range(y.shape[0]):
+            # multiply by 2 for one-sided spectrum
+            temp = Spectrum(2 * y.value[ii], df=y.df,
+                            f0=y.f0, epoch=y.epoch,
+                            unit=y.unit)
+            temp = coarseGrain(temp, variance.df.value, variance.f0.value, variance[1].size)
+            y_final[ii] = temp
+    else:
+        y_final = y
+    # calculate window factors!
+    w1w2bar, w1w2squaredbar, w1w2ovlsquaredbar = window_factors(
+        np.hanning(channel1.size), np.hanning(channel2.size))
+    # get the multiplicative window factor
+    multiplicative_factor = w1w2squaredbar / w1w2bar**2
+    # get snr!
+    diff = np.abs(y_final[1].size - variance[1].size)
+    if diff:
+        variance = variance[:,:-diff]
+
+    snr = multiplicative_factor * Spectrogram(y_final.value / variance.value**0.5,
+                                              unit=None, dt=y_final.dt, f0=y_final.f0,
+                                              df=y_final.df, epoch=y_final.epoch,
+                                              copy=True)
     return snr

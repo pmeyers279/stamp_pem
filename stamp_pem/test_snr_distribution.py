@@ -4,15 +4,14 @@ from gwpy.timeseries import TimeSeries
 import matplotlib.pyplot as plt
 import scipy.special
 
-data = TimeSeries(np.random.normal(0, 1, 163840), sample_rate=16384)
-data2 = TimeSeries(np.random.normal(0, 1, 163840), sample_rate=16384)
-snr = 2*pem.stamp_snr(data, data2, 1)
+data = TimeSeries(np.random.normal(0, 1, 16384*6), sample_rate=16384)
+data2 = TimeSeries(np.random.normal(0, 1, 16384*6), sample_rate=16384)
+snr = pem.stamp_snr(data, data2, 1)
 
 N = 2.
 sigma1 = 1.
 sigma2 = 1.
 constant = (N**(2. * N) / (2.**((2. * N) - 1) * sigma2**((4. * N) + 2.)))
-print constant
 
 x = np.arange(0.01, 10.01, 0.01)
 z = np.arange(-100, 100.01, 0.01)
