@@ -6,6 +6,7 @@ from gwpy.spectrogram import Spectrogram
 import numpy as np
 from astropy import units as u
 
+
 def fftgram(timeseries, stride, overlap=None, pad=False):
     """
     calculates fourier-gram with auto 50% overlapping
@@ -73,6 +74,7 @@ def fftgram(timeseries, stride, overlap=None, pad=False):
 
     return out
 
+
 def csdgram(channel1, channel2, stride, overlap=None, pad=False):
     """
     calculates one-sided csd spectrogram between two timeseries
@@ -109,7 +111,7 @@ def csdgram(channel1, channel2, stride, overlap=None, pad=False):
 
     if pad:
         # if zero padded, take every other frequency
-        out = out[:,0::2]
+        out = out[:, 0::2]
         df = fftgram1.df * 2
         f0 = fftgram1.f0 * 2
     else:
@@ -124,6 +126,7 @@ def csdgram(channel1, channel2, stride, overlap=None, pad=False):
                       unit=fftgram1.unit * fftgram2.unit, f0=f0)
 
     return out
+
 
 def coherence(channel1, channel2, stride, overlap=None, pad=False):
     if isinstance(channel1, TimeSeries):
@@ -140,47 +143,80 @@ def coherence(channel1, channel2, stride, overlap=None, pad=False):
     max_f = min(fftgram1.shape[1],
                 fftgram2.shape[1])
     # calculate csd
-    csd12 = csdgram(fftgram1[:,0:max_f], fftgram2[:,0:max_f],
+    csd12 = csdgram(fftgram1[:, 0:max_f], fftgram2[:, 0:max_f],
                     stride, overlap=None, pad=pad)
-    csd12 = np.mean(csd12,0)
+    csd12 = np.mean(csd12, 0)
     max_ixd = csd12.size
     if pad:
-        psd1 = np.mean(np.abs(fftgram1[:,0::2]) ** 2, 0)
-        psd2 = np.mean(np.abs(fftgram2[:,0::2]) ** 2, 0)
+        psd1 = np.mean(np.abs(fftgram1[:, 0::2]) ** 2, 0)
+        psd2 = np.mean(np.abs(fftgram2[:, 0::2]) ** 2, 0)
     else:
         psd1 = np.mean(np.abs(fftgram1) ** 2, 0)
         psd2 = np.mean(np.abs(fftgram2) ** 2, 0)
-    coherence = Spectrum(np.abs(csd12) ** 2 / (psd1[0:csd12.size] 
-                         * psd2[0:csd12.size]), df=fftgram1.df,
+    coherence = Spectrum(np.abs(csd12) ** 2 / (psd1[0:csd12.size]
+                                               * psd2[0:csd12.size]), df=fftgram1.df,
                          epoch=fftgram1.epoch, unit=None)
     return coherence, N, csd12, psd1, psd2
 
-def coherence_spectrogram(channel1, channel2, stride, segmentDuration,
-                          overlap=None, pad=False):
-        """
-        """
-        nsegs = (channel1.times.value[-1] - channel1.times.value[0]) \
-                 / segmentDuration
-        nfreqs = min(channel1.sample_rate.value,
-                    channel2.sample_rate.value) * (stride) * 0.5
-        df = 1. / stride
 
-        coherence_spectrogram = Spectrogram(np.zeros((nsegs, nfreqs)),
-                                            epoch=channel1.x0, dt=segmentDuration,
-                                            df=df, f0=df)
-        samples1 = segmentDuration * channel1.sample_rate.value
-        samples2 = segmentDuration * channel2.sample_rate.value
+def coherence_spectrogram(channel1, channel2, stride, segmentDuration,
+                          overlap=None, pad=False, frames=False,
+                          st=None, et=None):
+    """
+    """
+    if isinstance(channel1, TimeSeries):
+        nsegs = (channel1.times.value[-1] - channel1.times.value[0]) \
+            / segmentDuration
+        nfreqs = min(channel1.sample_rate.value,
+                     channel2.sample_rate.value) * stride * 0.5
+    elif isinstance(channel1, str):
+        nsegs = (et - st) / segmentDuration
+        test1 = _read_data(channel1, st, et)
+        test2 = _read_data(channel2, st, et)
+        nfreqs = min(test1.sample_rate.value,
+                     test2.sample_rate.value) * (stride) * 0.5
+
+    df = 1. / stride
+
+    coherence_spectrogram = Spectrogram(np.zeros((nsegs, nfreqs)),
+                                        df=df, f0=df)
+    psd1_spectrogram = Spectrogram(np.zeros((nsegs, nfreqs)),
+                                   df=df, f0=df, unit=u.Hz**-1)
+    psd2_spectrogram = Spectrogram(np.zeros((nsegs, nfreqs)),
+                                   df=df, f0=df, unit=u.Hz**-1)
+    if isinstance(channel1, str) and isinstance(channel2, str):
         for i in range(int(nsegs)):
-            idx_start = samples1 * i
-            idx_end = idx_start + samples1
-            stepseries1 = channel1[idx_start:idx_end]
-            stepseries2 = channel2[idx_start:idx_end]
+            startTime = st + i * segmentDuration
+            endTime = startTime + segmentDuration
+            stepseries1 = _read_data(channel1, startTime, endTime,
+                                     frames=frames)
+            stepseries2 = _read_data(channel2, startTime, endTime,
+                                     frames=frames)
             test, N, csd12, psd1, psd2 = coherence(stepseries1, stepseries2,
                                                    stride, overlap=None,
                                                    pad=pad)
             coherence_spectrogram[i] = test
+            psd1_spectrogram[i] = psd1
+            psd2_spectrogram[i] = psd2
+    else:
+        samples1 = segmentDuration * channel1.sample_rate.value
+        samples2 = segmentDuration * channel2.sample_rate.value
+        for i in range(int(nsegs)):
+            idx_start1 = samples1 * i
+            idx_end1 = idx_start1 + samples1
+            idx_start2 = samples2 * i
+            idx_end2 = idx_start2 + samples2
+            stepseries1 = channel1[idx_start1:idx_end1]
+            stepseries2 = channel2[idx_start2:idx_end2]
+            test, N, csd12, psd1, psd2 = coherence(stepseries1, stepseries2,
+                                                   stride, overlap=None,
+                                                   pad=pad)
+        coherence_spectrogram[i] = test
+        psd1[i] = psd1
+        psd2[i] = psd2
 
-        return coherence_spectrogram
+    return coherence_spectrogram, psd1, psd2, N
+
 
 def _read_data(channel, st, et, frames=False):
     """
@@ -198,7 +234,8 @@ def _read_data(channel, st, et, frames=False):
 
     return data
 
-def coherence_list(channel1, channels, stride, st=None, et=None, 
+
+def coherence_list(channel1, channels, stride, st=None, et=None,
                    overlap=None, pad=False, frames=False):
     coh = {}
     psd1 = {}
@@ -209,9 +246,6 @@ def coherence_list(channel1, channels, stride, st=None, et=None,
     for channel in channels:
         data = _read_data(channel, st, et)
         coh[channel], N, csd12[channel], psd1[channel], psd2[channel] = \
-        coherence(darm_fft, data, stride, overlap=overlap, pad=pad)
+            coherence(darm_fft, data, stride, overlap=overlap, pad=pad)
 
     return coh, N, csd12, psd1, psd2
-
-
-

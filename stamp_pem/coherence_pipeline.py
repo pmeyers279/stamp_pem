@@ -66,39 +66,22 @@ def _read_list(file):
         channels.append(line.split('\n')[0])
     f.close()
     return channels
-
 params = parse_command_line()
+
 channels = _read_list(params.list)
-darm = _read_data(params.channel1, params.st, params.et, frames=params.frames)
-darm_fft = cf.fftgram(darm, params.stride, pad=True)
-coh = {}
-# for channel in channels:
-#     data = _read_data(channel, params.st, params.et, frames=params.frames)
-#     # in case DARM stores too many frequencies for this channel
-#     coh[channel], N, csd12, psd1, psd2 = cf.coherence(darm_fft,
-#                                                       data,
-#                                                       params.stride,
-#                                                       overlap=None,
-#                                                       pad=True)
-# theorCoh = 1. / N
-coh, N, csd12, psd1, psd2 = cf.coherence_list(params.channel1, channels, params.stride, st=params.st,
-                                           et = params.et, pad=True)
+first = 1
 for channel in channels:
-    data = _read_data(channel, params.st, params.et, frames=params.frames)
-    specgram = cf.coherence_spectrogram(darm, data, params.stride,
-                                     params.sd, overlap=None, pad=True)
-    plot = specgram.plot(vmin=1e-3, vmax=1, norm='log')
+    coherence, psd1, psd2, N = cf.coherence_spectrogram(params.channel1,
+                                                        channel,
+                                                        params.stride,
+                                                        params.sd,
+                                                        st=params.st,
+                                                        et=params.et,
+                                                        frames=true)
+    plot = coherence.plot()
     plot.add_colorbar(label='coherence')
     plot.show()
 
-theorCoh = 1. / N
-
-for channel in channels:
-    coherence = coh[channel]
-    plot = coherence.plot()
-    ax = plot.gca()
-    freqs = coherence.frequencies
-    ax.plot(freqs.value, theorCoh*np.ones(freqs.size),'r')
-    ax.set_ylim(1e-5,1.1)
-    ax.set_yscale('log')
-    plot.show()
+plot = psd1.plot()
+plot.add_colorbar('power in %s' % params.channel1)
+plot.show()
