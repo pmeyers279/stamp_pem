@@ -33,13 +33,15 @@ def fftgram(timeseries, stride, pad=False):
     # only get positive frequencies
     if pad:
         nfreqs = int(fftlength * timeseries.sample_rate.value)
+        df = df / 2
+        f0 = df
     else:
         nfreqs = int(fftlength * timeseries.sample_rate.value) / 2
     dtype = np.complex
     # initialize the spectrogram
     out = Spectrogram(np.zeros((nsteps, nfreqs), dtype=dtype),
                       name=timeseries.name, epoch=timeseries.epoch,
-                      f0=df / 2, df=df / 2, dt=dt, copy=True,
+                      f0=df, df=df, dt=dt, copy=True,
                       unit=1 / u.Hz**0.5, dtype=dtype)
     # stride through TimeSeries, recording FFTs as columns of Spectrogram
     for step in range(nsteps):
@@ -66,7 +68,7 @@ def fftgram(timeseries, stride, pad=False):
     return out
 
 
-def psdgram(timeseries, stride, adjacent=1):
+def psdgram(timeseries, stride):
     """
     calculates one-sided PSD from timeseries
     properly using welch's method by averaging adjacent non-ovlping
@@ -321,7 +323,7 @@ def stamp_y(channel1, channel2, stride):
         y : Spectrogram object
             stamp point estimate
     """
-    return 2*np.real(csdgram(channel1,channel2,stride))
+    return 2*np.abs(csdgram(channel1,channel2,stride))
 
 
 def stamp_snr(channel1, channel2, stride):
