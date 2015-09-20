@@ -1,8 +1,8 @@
 #!/opt/local/bin/python
 
-from stamp_pem import coherence_functions as cf
+import coherence_functions as cf
 import optparse
-from stamp_pem import coh_io
+import coh_io
 
 
 def parse_command_line():
