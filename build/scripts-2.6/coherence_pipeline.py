@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/usr/bin/python
 
 from stamp_pem import coherence_functions as cf
 import optparse

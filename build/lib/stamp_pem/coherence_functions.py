@@ -305,7 +305,10 @@ def _read_data(channel, st, et, frames=False):
     if frames:
         # read from frames
         connection = datafind.GWDataFindHTTPConnection()
-        cache = connection.find_frame_urls(ifo[0], ifo + '_R', st, et)
+	if channel.split(':')[1] == 'GDS-CALIB_STRAIN':
+	    cache = connection.find_frame_urls(ifo[0],ifo+'_HOFT_C00', st, et, 'file')
+	else:
+	    cache = connection.find_frame_urls(ifo[0], ifo + '_C', st, et,'file')
         data = TimeSeries.read(cache, channel, st, et)
     else:
         data = TimeSeries.fetch(channel, st, et)
