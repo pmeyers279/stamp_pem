@@ -36,6 +36,8 @@ def parse_command_line():
     parser.add_option(
         "--segment-duration", dest='sd', help="segment duration for specgram",
         type=float, default=None)
+    parser.add_option(
+        "--subsystem", dest='sub', type=str, help='subsystem', default=None)
     params, args = parser.parse_args()
     return params
 
@@ -45,18 +47,33 @@ params = parse_command_line()
 channels = coh_io.read_list(params.list)
 
 # key is the subsystem in this case
-for key in channels.keys():
+if not params.subsystem:
+    for key in channels.keys():
 
-    # calculate coherence from list
-    cf.coherence_from_list(params.channel1, channels[key], params.stride,
+        # calculate coherence from list
+        cf.coherence_from_list(params.channel1, channels[key], params.stride,
+                               params.st, params.et, frames=params.frames,
+                               save=True, pad=True, fhigh=int(params.fhigh),
+                               subsystem=key)
+
+        # generate filename used in calculating coherence from list
+        filename = coh_io.create_coherence_data_filename(
+            params.channel1, key, params.st, params.et)
+
+        # plot coherence matrix from file produced
+        cf.plot_coherence_matrix_from_file(
+            params.channel1, channels, filename, key)
+else:
+    cf.coherence_from_list(params.channel1, channels[params.subsystem],
+                           params.stride,
                            params.st, params.et, frames=params.frames,
                            save=True, pad=True, fhigh=int(params.fhigh),
-                           subsystem=key)
+                           subsystem=params.subsystem)
 
     # generate filename used in calculating coherence from list
     filename = coh_io.create_coherence_data_filename(
-        params.channel1, key, params.st, params.et)
+        params.channel1, params.subsystem, params.st, params.et)
 
     # plot coherence matrix from file produced
     cf.plot_coherence_matrix_from_file(
-        params.channel1, channels, filename, key)
+        params.channel1, channels, filename, params.subsystem)

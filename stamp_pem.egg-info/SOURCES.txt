@@ -2,6 +2,7 @@ setup.py
 stamp_pem/LICENSE
 stamp_pem/README.md
 stamp_pem/__init__.py
+stamp_pem/__init__.pyc
 stamp_pem/channels.ini
 stamp_pem/coh_io.py
 stamp_pem/coh_io.pyc
