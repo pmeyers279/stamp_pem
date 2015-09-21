@@ -44,15 +44,15 @@ for key in channels.keys():
     node.add_macro("subsystem", key)
 
 datajob.set_sub_file('coherence.sub')
-arg = '-s %d -e %d --list %s --fhigh %f --stride %d --subsystem %s --frames 1' % (
-    params.st, params.et, params.list, params.fhigh, params.stride, key)
+arg = '-s %d -e %d --list %s --fhigh %f --stride %d --subsystem $(subsystem) --frames 1' % (
+    params.st, params.et, params.list, params.fhigh, params.stride)
 datajob.add_arg(arg)
 datajob.set_stderr_file('/usr1/meyers/$(subsystem).err')
 datajob.set_stdout_file('/usr1/meyers/$(subsystem).out')
 datajob.set_sub_file('coherence.sub')
 datajob.set_log_file('/usr1/meyers/$(subsystem).log')
 datajob.write_sub_file()
-dag.set_dag_file('coherence.dag')
+dag.set_dag_file('coherence')
 dag.write_dag()
 dag.write_script()
 
