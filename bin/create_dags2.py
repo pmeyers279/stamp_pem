@@ -31,28 +31,29 @@ params = parse_command_line()
 channels = coh_io.read_list(params.list)
 
 datajob = pipeline.CondorDAGJob('vanilla', './coherence_pipeline.py')
-dag = pipeline.CondorDAG('/usr1/meyers/$(subsystem).log')
+dag = pipeline.CondorDAG('/home/meyers/$(subsystem).log')
 
 for key in channels.keys():
     dagName = '%s-%d-%d.dag' % (params.list.split('.')[0],
                                 params.st, params.et)
     job = pipeline.CondorDAGJob('vanilla', './coherence_pipeline')
     job.set_sub_file('coherence.sub')
-    job.set_stderr_file('/usr1/meyers/$(subsystem).err')
-    job.set_stdout_file('/usr1/meyers/$(subsystem).out')
+    job.set_stderr_file('/home/meyers/$(subsystem).err')
+    job.set_stdout_file('/home/meyers/$(subsystem).out')
     node = pipeline.CondorDAGNode(job)
     node.add_macro("subsystem", key)
+    dag.add_node(node)
 
 datajob.set_sub_file('coherence.sub')
-arg = '-s %d -e %d --list %s --fhigh %f --stride %d --subsystem %s --frames 1' % (
-    params.st, params.et, params.list, params.fhigh, params.stride, key)
+arg = '-s %d -e %d --list %s --fhigh %f --stride %d --subsystem $(subsystem) --frames 1' % (
+    params.st, params.et, params.list, params.fhigh, params.stride)
 datajob.add_arg(arg)
-datajob.set_stderr_file('/usr1/meyers/$(subsystem).err')
-datajob.set_stdout_file('/usr1/meyers/$(subsystem).out')
+datajob.set_stderr_file('/home/meyers/$(subsystem).err')
+datajob.set_stdout_file('/home/meyers/$(subsystem).out')
 datajob.set_sub_file('coherence.sub')
-datajob.set_log_file('/usr1/meyers/$(subsystem).log')
+datajob.set_log_file('/home/meyers/$(subsystem).log')
 datajob.write_sub_file()
-dag.set_dag_file('coherence.dag')
+dag.set_dag_file('coherence')
 dag.write_dag()
 dag.write_script()
 
