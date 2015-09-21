@@ -42,6 +42,7 @@ for key in channels.keys():
     job.set_stdout_file('/usr1/meyers/$(subsystem).out')
     node = pipeline.CondorDAGNode(job)
     node.add_macro("subsystem", key)
+    dag.add_node(node)
 
 datajob.set_sub_file('coherence.sub')
 arg = '-s %d -e %d --list %s --fhigh %f --stride %d --subsystem $(subsystem) --frames 1' % (
