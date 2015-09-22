@@ -391,8 +391,10 @@ def create_matrix_from_file(coh_file, channels):
     for channel in channels:
         data = Spectrum.from_hdf5(f['coherences'][channel])
         if First:
+            # initialize matrix!
+            darm_psd = Spectrum.from_hdf5(f['psd1'][f['psd1'].keys()[0]])
             First = 0
-            coh_matrix = np.zeros((data.size, len(channels)))
+            coh_matrix = np.zeros((darm_psd.size, len(channels)))
         labels.append(channel[3:-3].replace('_', '-'))
         coh_matrix[:data.size, counter] = data
         counter += 1
