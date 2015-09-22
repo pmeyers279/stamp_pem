@@ -404,7 +404,7 @@ def create_matrix_from_file(coh_file, channels):
 def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem):
     my_dpi = 100
     for label in labels:
-        label.replace(subsystem,'')
+        label = label.replace(subsystem,'')
     plt.figure(figsize=(1200. / my_dpi, 600. / my_dpi), dpi=my_dpi)
     plt.pcolormesh(frequencies, np.arange(
         0, len(labels) + 1), coh_matrix.value.T,
