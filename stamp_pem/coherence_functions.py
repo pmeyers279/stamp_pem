@@ -403,6 +403,8 @@ def create_matrix_from_file(coh_file, channels):
 
 def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem):
     my_dpi = 100
+    for label in labels:
+        label.replace(subsystem,'')
     plt.figure(figsize=(1200. / my_dpi, 600. / my_dpi), dpi=my_dpi)
     plt.pcolormesh(frequencies, np.arange(
         0, len(labels) + 1), coh_matrix.value.T,
@@ -413,6 +415,7 @@ def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem):
     plt.title(subsystem)
     plt.yticks(np.arange(1, len(labels) + 1) - 0.5, labels, fontsize=8)
     ax.set_xlim(frequencies[0], frequencies[-1])
+    ax.set_xlabel('Frequency [Hz]')
     return plt
 
 
@@ -426,40 +429,8 @@ def plot_coherence_matrix_from_file(darm_channel, channel_list, coh_file, subsys
     channels = []
     for key in chans[subsystem].keys():
         channels.append(chans[subsystem][key])
-    # filename = darm_channel.replace(
-    #     ':', '-') + '-' + subsystem + '-' +\
-    #     str(st) + '-' + str(et - st)
-    # f = h5py.File(filename, 'r')
-    # # get number of averages
-    # N = f['info'].value
-    # First = 1
-    # for channel in channels:
-    #     data = Spectrum.from_hdf5(f['coherences'][channel])
-    #     if First:
-    #         First = 0
-    #         coh_matrix = np.zeros((data.size, len(channels)))
-    #     labels.append(channel[3:-3].replace('_', '-'))
-    #     coh_matrix[:, counter] = data
-    #     counter += 1
-    # coh_matrix = Spectrogram(coh_matrix * N)
     coh_matrix, frequencies, labels, N = create_matrix_from_file(coh_file, channels)
-    for label in labels:
-	   label.replace(subsystem,'')
     plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem)
     outfile = coh_file.split('.')[0]
     plot.savefig(outfile)
     plot.close()
-    # my_dpi = 100
-    # plt.figure(figsize=(1200. / my_dpi, 600. / my_dpi), dpi=my_dpi)
-    # plt.pcolormesh(data.frequencies.value, np.arange(
-    #     0, len(channels) + 1), coh_matrix.value.T,
-    #     norm=LogNorm(vmin=1, vmax=20))
-    # cbar = plt.colorbar(label='coherence SNR')
-    # cbar.set_ticks(np.arange(1, 21))
-    # ax = plt.gca()
-    # plt.title(subsystem)
-    # plt.yticks(np.arange(1, len(channels) + 1) - 0.5, labels, fontsize=8)
-    # ax.set_xlim(data.frequencies.value[0], data.frequencies.value[-1])
-
-    # plt.savefig(outfile)
-    # plt.close()
