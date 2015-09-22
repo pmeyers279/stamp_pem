@@ -399,7 +399,7 @@ def create_matrix_from_file(coh_file, channels):
         coh_matrix[:data.size, counter] = data
         counter += 1
     coh_matrix = Spectrogram(coh_matrix * N)
-    return coh_matrix, data.frequencies.value, labels, N
+    return coh_matrix, darm_psd.frequencies.value, labels, N
 
 def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem):
     my_dpi = 100
