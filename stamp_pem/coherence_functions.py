@@ -444,7 +444,7 @@ def plot_coherence_matrix_from_file(darm_channel, channel_list, coh_file, subsys
     # coh_matrix = Spectrogram(coh_matrix * N)
     coh_matrix, frequencies, labels, N = create_matrix_from_file(coh_file, channels)
     for label in labels:
-	label.replace(subsystem,'')
+	   label.replace(subsystem,'')
     plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem)
     outfile = coh_file.split('.')[0]
     plot.savefig(outfile)
