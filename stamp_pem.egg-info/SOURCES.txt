@@ -17,5 +17,4 @@ stamp_pem.egg-info/PKG-INFO
 stamp_pem.egg-info/SOURCES.txt
 stamp_pem.egg-info/dependency_links.txt
 stamp_pem.egg-info/not-zip-safe
-stamp_pem.egg-info/pbr.json
 stamp_pem.egg-info/top_level.txt
