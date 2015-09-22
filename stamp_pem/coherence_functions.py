@@ -401,7 +401,7 @@ def create_matrix_from_file(coh_file, channels):
     coh_matrix = Spectrogram(coh_matrix * N)
     return coh_matrix, darm_psd.frequencies.value, labels, N
 
-def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem):
+def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=None, flow=None):
     my_dpi = 100
     for label in labels:
         label = label.replace(subsystem,'')
@@ -414,12 +414,16 @@ def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem):
     ax = plt.gca()
     plt.title(subsystem)
     plt.yticks(np.arange(1, len(labels) + 1) - 0.5, labels, fontsize=8)
-    ax.set_xlim(frequencies[0], frequencies[-1])
+    if not fhigh:
+        fhigh=frequencies[-1]
+    if not flow:
+        flow=frequencyes[0]
+    ax.set_xlim(fhigh, flow)
     ax.set_xlabel('Frequency [Hz]')
     return plt
 
 
-def plot_coherence_matrix_from_file(darm_channel, channel_list, coh_file, subsystem=None):
+def plot_coherence_matrix_from_file(darm_channel, channel_list, coh_file, subsystem=None, fhigh=None, flow=None):
     labels = []
     counter = 0
     if isinstance(channel_list, str):
@@ -430,7 +434,7 @@ def plot_coherence_matrix_from_file(darm_channel, channel_list, coh_file, subsys
     for key in chans[subsystem].keys():
         channels.append(chans[subsystem][key])
     coh_matrix, frequencies, labels, N = create_matrix_from_file(coh_file, channels)
-    plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem)
+    plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=fhigh, flow=flow)
     outfile = coh_file.split('.')[0]
     plot.savefig(outfile)
     plot.close()
