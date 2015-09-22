@@ -366,7 +366,7 @@ def coherence_from_list(darm_channel, channel_list,
     csd12s = f.create_group('csd12s')
     for channel in channels:
         data = _read_data(channel, st, et, frames=frames)
-        if fhigh is not None and 2 * data.sample_rate.value > fhigh:
+        if fhigh is not None and data.sample_rate.value > 2 * fhigh:
             data = data.resample(fhigh * 2)
         # get coherence
         coh_temp, csd_temp, psd1_temp, psd2_temp, N = \
