@@ -366,7 +366,7 @@ def coherence_from_list(darm_channel, channel_list,
     csd12s = f.create_group('csd12s')
     for channel in channels:
         data = _read_data(channel, st, et, frames=frames)
-        if fhigh is not None:
+        if fhigh is not None and 2 * data.sample_rate.value > fhigh:
             data = data.resample(fhigh * 2)
         # get coherence
         coh_temp, csd_temp, psd1_temp, psd2_temp, N = \
@@ -389,13 +389,12 @@ def create_matrix_from_file(coh_file, channels):
     N = f['info'].value
     First = 1
     for channel in channels:
-        print 'HI ' + channel
         data = Spectrum.from_hdf5(f['coherences'][channel])
         if First:
             First = 0
             coh_matrix = np.zeros((data.size, len(channels)))
         labels.append(channel[3:-3].replace('_', '-'))
-        coh_matrix[:, counter] = data
+        coh_matrix[:data.size, counter] = data
         counter += 1
     coh_matrix = Spectrogram(coh_matrix * N)
     return coh_matrix, data.frequencies.value, labels, N
