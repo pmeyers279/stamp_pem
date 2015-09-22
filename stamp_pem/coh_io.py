@@ -26,10 +26,13 @@ def read_list(list):
     return channels
 
 
-def create_coherence_data_filename(darm_channel, subsystem, st, et):
+def create_coherence_data_filename(darm_channel, subsystem, st, et,tag=None):
     filename = darm_channel.replace(
         ':', '-') + '-' + subsystem + '-' +\
         str(st) + '-' + str(et - st)
     chan = darm_channel.replace(':', '-')
-    filename = '%s-%s-%d-%d' % (chan, subsystem, st, et - st)
+    if tag:
+        filename = '%s-%s-%s-%d-%d' % (chan, subsystem, tag, st, et - st)
+    else:
+        filename = '%s-%s-%d-%d' % (chan, subsystem, st, et - st)
     return filename
