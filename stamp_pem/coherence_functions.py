@@ -413,7 +413,7 @@ def coherence_list(channel1, channels, stride, st=None, et=None,
 def coherence_from_list(darm_channel, channels,
                         stride, st, et, frames=False, save=False,
                         pad=False, fhigh=None, subsystem=None,
-                        spec_fhigh=None,spec_flow=None, outputDir='./'):
+                        spec_fhigh=None,spec_flow=None, directory='./'):
     nargout = expecting()
 
     if not subsystem:
@@ -426,7 +426,7 @@ def coherence_from_list(darm_channel, channels,
     coherence_dict = {}
 
     # set up hdf5 file for output
-    outputDir = coh_io.get_directory_structure(subsystem, st, directory=outputDir)
+    outputDir = coh_io.get_directory_structure(subsystem, st, directory=directory)
     fname = coh_io.create_coherence_data_filename(darm_channel, subsystem, st, et)
     filename = '%s/%s'%(outputDir, fname)
     f = h5py.File(filename, 'w')
@@ -449,7 +449,7 @@ def coherence_from_list(darm_channel, channels,
         plot = plot_coherence_specgram(coh_spec,darm_channel, channel, st, et,
                                 fhigh=spec_fhigh, flow=spec_flow)
         spec_name = coh_io.create_coherence_data_filename(darm_channel, channel, st, et)
-        outDir = coh_io.get_directory_structure(subsystem, st, directory=outputDir, specgram=True)
+        outDir = coh_io.get_directory_structure(subsystem, st, directory=directory, specgram=True)
         plot.savefig('%s/%s' % (outDir, spec_name))
 
         # add coherence to coherence dictionary
@@ -471,11 +471,11 @@ def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, fhigh=None,
     plot = coh_spec.plot(vmin=coh_spec.value.min(),vmax=1,norm='log')
     ax = plot.gca()
     if not fhigh:
-        fhigh = coh_spec.frequencies[-1]
+        fhigh = coh_spec.frequencies[-1].value
     if not flow:
-        flow = coh_spec.frequencies[0]
+        flow = coh_spec.frequencies[0].value
     ax.set_ylim(flow,fhigh)
-    ax.set_title('Coherence between %s and %s'%chan_pname, darm_chan_pname,
+    ax.set_title('Coherence between %s and %s' % (chan_pname, darm_chan_pname),
                  fontsize=12)
     return plot
 
