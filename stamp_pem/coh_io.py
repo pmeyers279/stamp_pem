@@ -42,9 +42,9 @@ def create_coherence_data_filename(darm_channel, subsystem, st, et,
 
 def get_directory_structure(subsystem, st, directory='./', specgram=False):
     if specgram:
-        return '%s/%s/%s/' % (directory, subsystem, str(st)[0:5])
+        return '%s/%s/%s/%s' % (directory, subsystem, str(st)[0:5], 'plots')
     else:
-        return '%s/%s/%s/' % (directory, subsystem, str(st)[0:5], 'plots')
+        return '%s/%s/%s/' % (directory, subsystem, str(st)[0:5])
 
 
 def create_directory_structure(subsystems, st, directory='./'):
