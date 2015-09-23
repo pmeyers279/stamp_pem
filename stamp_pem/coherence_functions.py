@@ -416,13 +416,9 @@ def coherence_from_list(darm_channel, channels,
                         spec_fhigh=None,spec_flow=None, outputDir='./'):
     nargout = expecting()
 
+    if not subsystem:
+        subsystem='CHANS'
 
-    if isinstance(channel_list, str):
-        channels = coh_io.read_list(channel_list)
-    else:
-        channels = []
-        for key in channel_list.keys():
-            channels.append(channel_list[key])
     darm = _read_data(darm_channel, st, et, frames=frames)
     if fhigh is not None:
         darm = darm.resample(fhigh * 2)
