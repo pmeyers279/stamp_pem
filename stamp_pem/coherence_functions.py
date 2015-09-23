@@ -471,7 +471,7 @@ def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, fhigh=None,
     darm_chan_pname=darm_channel.replace('_','\_')
     plot = coh_spec.plot(vmin=1e-2,vmax=1,norm='log')
     ax = plot.gca()
-    ax.add_colorbar(label='Coherence')
+    plot.add_colorbar(label='Coherence')
     if not fhigh:
         fhigh = coh_spec.frequencies[-1].value
     if not flow:
