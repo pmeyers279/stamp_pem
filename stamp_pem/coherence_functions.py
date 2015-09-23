@@ -137,9 +137,18 @@ def csdgram(channel1, channel2, stride, overlap=None, pad=False):
     return out
 
 
-def coherence(channel1, channel2, stride, overlap=None, pad=False, segmentDuration=None):
+def coherence(channel1, channel2, stride, overlap=None, pad=False,
+              segmentDuration=None):
     """
     calculates coherence from two timeseries or fft f-t maps
+    depending on requested # of output variables, it returns different things.
+
+    2 : coherence, number of segments averaged
+    3 : coherence, number of segments averaged, coherence spectrogram
+    5 : coherence, csd, psd1, psd2, number of segments averaged
+    6 : coherence, csd, psd1, psd2, number of segments averaged,
+        coherence spectrogram
+
 
     Parameters:
     -----------
@@ -154,6 +163,8 @@ def coherence(channel1, channel2, stride, overlap=None, pad=False, segmentDurati
       pad : bool (optional)
           decide whether or not to pad before taking ffts or
           used to indicate if input ffts were padded
+      segmentDuration : float (optional)
+          length of segment for creating coherence spectrogram. if 
 
     Returns:
     --------
@@ -167,6 +178,9 @@ def coherence(channel1, channel2, stride, overlap=None, pad=False, segmentDurati
           power spectral density of channel 2
       N : int
           number of averages done to get coherence spectrum
+      coh_spectrogram : Spectrogram object
+          coherence spectrogram with time segments of lengths segmentDuration
+
     """
     nargout = expecting()
 
@@ -186,7 +200,7 @@ def coherence(channel1, channel2, stride, overlap=None, pad=False, segmentDurati
     # calculate csd
     csd12 = csdgram(fftgram1[:, 0:max_f], fftgram2[:, 0:max_f],
                     stride, overlap=overlap, pad=pad)
-    if nargout==6:
+    if nargout==6 or 3:
         coh_spectrogram = _coherence_spectrogram(fftgram1, fftgram2, stride, segmentDuration, pad=pad)
     csd12 = np.mean(csd12, 0)
     if pad:
@@ -200,6 +214,14 @@ def coherence(channel1, channel2, stride, overlap=None, pad=False, segmentDurati
                                                * psd2[0:csd12.size]),
                          df=csd12.df,
                          epoch=csd12.epoch, unit=None, name=coh_name)
+    if nargout==1:
+        raise ValueError('coherence outputs 2, 3, 5 or 6 values. Not 1 or 4')
+    if nargout==2:
+        return coherence, N
+    if nargout==3:
+        return coherence, N, coh_spectrogram
+    if nargout==4:
+        raise ValueError('coherence outputs 2, 3, 5 or 6 values. Not 1 or 4')
     if nargout==5:
         return coherence, csd12, psd1, psd2, N
     if nargout==6:
@@ -388,10 +410,10 @@ def coherence_list(channel1, channels, stride, st=None, et=None,
     return coh, csd12, psd1, psd2, N
 
 
-def coherence_from_list(darm_channel, channel_list,
+def coherence_from_list(darm_channel, channels,
                         stride, st, et, frames=False, save=False,
                         pad=False, fhigh=None, subsystem=None,
-                        spec_fhigh=None,spec_flow=None):
+                        spec_fhigh=None,spec_flow=None, outputDir='./'):
     nargout = expecting()
 
 
@@ -406,12 +428,18 @@ def coherence_from_list(darm_channel, channel_list,
         darm = darm.resample(fhigh * 2)
     fftgram1 = fftgram(darm, stride, pad=True)
     coherence_dict = {}
-    filename = coh_io.create_coherence_data_filename(darm_channel, subsystem, st, et)
+
+    # set up hdf5 file for output
+    outputDir = coh_io.get_directory_structure(subsystem, st, directory=outputDir)
+    fname = coh_io.create_coherence_data_filename(darm_channel, subsystem, st, et)
+    filename = '%s/%s'%(outputDir, fname)
     f = h5py.File(filename, 'w')
     coherences = f.create_group('coherences')
     psd1 = f.create_group('psd1')
     psd2s = f.create_group('psd2s')
     csd12s = f.create_group('csd12s')
+
+    # read data, populate hdf5 file
     for channel in channels:
         data = _read_data(channel, st, et, frames=frames)
         if fhigh is not None and data.sample_rate.value > 2 * fhigh:
@@ -420,10 +448,17 @@ def coherence_from_list(darm_channel, channel_list,
         # get coherence
         coh_temp, csd_temp, psd1_temp, psd2_temp, N, coh_spec = \
             coherence(fftgram1, data, stride, pad=pad)
-        plot_coherence_specgram(coh_spec,darm_channel, channel, st, et,
-                                fhigh=spec_high, flow=spec_flow)
 
+        # plot coherence spectrogram
+        plot = plot_coherence_specgram(coh_spec,darm_channel, channel, st, et,
+                                fhigh=spec_high, flow=spec_flow)
+        spec_name = coh_io.create_coherence_data_filename(darm_channel, channel, st, et)
+        outDir = coh_io.get_directory_structure(subsystem, st, directory=outputDir, specgram=True)
+        plot.savefig('%s/%s' % (outDir, spec_name))
+
+        # add coherence to coherence dictionary
         coherence_dict[channel] = coh_temp
+
         # save to coherence
         coh_temp.to_hdf5(f['coherences'], name=channel)
         csd_temp.to_hdf5(f['csd12s'], name=channel)
@@ -446,8 +481,7 @@ def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, fhigh=None,
     ax.set_ylim(flow,fhigh)
     ax.set_title('Coherence between %s and %s'%chan_pname, darm_chan_pname,
                  fontsize=12)
-    filename = coh_io.create_coherence_data_filename(darm_channel, channel, st, et)
-    plot.savefig(filename)
+    return plot
 
 
 def create_matrix_from_file(coh_file, channels):

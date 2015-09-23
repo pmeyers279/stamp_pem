@@ -40,7 +40,8 @@ def parse_command_line():
         "--segment-duration", dest='sd', help="segment duration for specgram",
         type=float, default=None)
     parser.add_option(
-        "--subsystem", dest='subsystem', type=str, help='subsystem', default=None)
+        "--subsystem", dest='subsystem', type=str, help='subsystem',
+        default=None)
     params, args = parser.parse_args()
     return params
 
@@ -49,34 +50,49 @@ params = parse_command_line()
 # read channel list
 channels = coh_io.read_list(params.list)
 
+
 # key is the subsystem in this case
 if not params.subsystem:
-    for key in channels.keys():
+    coh_io.create_directory_structure(
+        channels.keys(), params.st, directory=params.dir)
+    for sub in channels.keys():
+        chans = []
+        for key in channels[sub].keys():
+            chans.append(channels[sub][key])
 
         # calculate coherence from list
-        cf.coherence_from_list(params.channel1, channels[key], params.stride,
+        cf.coherence_from_list(params.channel1, chans, params.stride,
                                params.st, params.et, frames=params.frames,
                                save=True, pad=True, fhigh=int(params.fhigh),
-                               subsystem=key)
+                               subsystem=sub, outputDir=params.dir)
 
         # generate filename used in calculating coherence from list
-        filename = coh_io.create_coherence_data_filename(
-            params.channel1, key, params.st, params.et)
+        outDir = coh_io.get_directory_structure(
+            sub, params.st, directory=params.dir)
+        fname = coh_io.create_coherence_data_filename(
+            params.channel1, sub, params.st, params.et)
 
         # plot coherence matrix from file produced
         cf.plot_coherence_matrix_from_file(
-            params.channel1, channels, filename, key)
+            params.channel1, channels, '%s/%s' % (outDir, fname), sub)
 else:
-    cf.coherence_from_list(params.channel1, channels[params.subsystem],
+    coh_io.create_directory_structure(
+        [params.subsystem], params.st, directory=params.dir)
+    chans = []
+    for key in channels[params.subsystem].keys():
+        chans.append(channels[params.subsystem][key])
+    cf.coherence_from_list(params.channel1, chans,
                            params.stride,
                            params.st, params.et, frames=params.frames,
                            save=True, pad=True, fhigh=int(params.fhigh),
-                           subsystem=params.subsystem)
+                           subsystem=params.subsystem, outputDir=params.dir)
 
     # generate filename used in calculating coherence from list
-    filename = coh_io.create_coherence_data_filename(
-        params.channel1, params.subsystem, params.st, params.et)
+    outDir = coh_io.get_directory_structure(
+        sub, params.st, directory=params.dir)
+    fname = coh_io.create_coherence_data_filename(
+        params.channel1, sub, params.st, params.et)
 
     # plot coherence matrix from file produced
     cf.plot_coherence_matrix_from_file(
-        params.channel1, channels, filename, params.subsystem)
+        params.channel1, channels, '%s/%s' % (outDir, fname), params.subsystem)
