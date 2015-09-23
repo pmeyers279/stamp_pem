@@ -447,7 +447,7 @@ def coherence_from_list(darm_channel, channels,
 
         # plot coherence spectrogram
         plot = plot_coherence_specgram(coh_spec,darm_channel, channel, st, et,
-                                fhigh=spec_high, flow=spec_flow)
+                                fhigh=spec_fhigh, flow=spec_flow)
         spec_name = coh_io.create_coherence_data_filename(darm_channel, channel, st, et)
         outDir = coh_io.get_directory_structure(subsystem, st, directory=outputDir, specgram=True)
         plot.savefig('%s/%s' % (outDir, spec_name))
