@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import h5py
 import coh_io
+import inspect,dis
+
+
 
 
 def fftgram(timeseries, stride, overlap=None, pad=False):
@@ -54,6 +57,8 @@ def fftgram(timeseries, stride, overlap=None, pad=False):
                       f0=df, df=df, dt=dt, copy=True,
                       unit=1 / u.Hz**0.5, dtype=dtype)
     # stride through TimeSeries, recording FFTs as columns of Spectrogram
+    if (timeseries.sample_rate.value * stride) % 1:
+        raise ValueError('1 / stride must evenly divide sample rate of channel')
     for step in range(nsteps):
         # indexes for this step
         idx = (stride / 2) * step
@@ -132,7 +137,7 @@ def csdgram(channel1, channel2, stride, overlap=None, pad=False):
     return out
 
 
-def coherence(channel1, channel2, stride, overlap=None, pad=False):
+def coherence(channel1, channel2, stride, overlap=None, pad=False, segmentDuration=None):
     """
     calculates coherence from two timeseries or fft f-t maps
 
@@ -163,6 +168,7 @@ def coherence(channel1, channel2, stride, overlap=None, pad=False):
       N : int
           number of averages done to get coherence spectrum
     """
+    nargout = expecting()
 
     if isinstance(channel1, TimeSeries):
         fftgram1 = fftgram(channel1, stride, overlap=overlap, pad=pad)
@@ -179,7 +185,9 @@ def coherence(channel1, channel2, stride, overlap=None, pad=False):
                 fftgram2.shape[1])
     # calculate csd
     csd12 = csdgram(fftgram1[:, 0:max_f], fftgram2[:, 0:max_f],
-                    stride, overlap=None, pad=pad)
+                    stride, overlap=overlap, pad=pad)
+    if nargout==6:
+        coh_spectrogram = _coherence_spectrogram(fftgram1, fftgram2, stride, segmentDuration, pad=pad)
     csd12 = np.mean(csd12, 0)
     if pad:
         psd1 = np.mean(np.abs(fftgram1[:, 0::2]) ** 2, 0)
@@ -192,7 +200,44 @@ def coherence(channel1, channel2, stride, overlap=None, pad=False):
                                                * psd2[0:csd12.size]),
                          df=csd12.df,
                          epoch=csd12.epoch, unit=None, name=coh_name)
-    return coherence, csd12, psd1, psd2, N
+    if nargout==5:
+        return coherence, csd12, psd1, psd2, N
+    if nargout==6:
+        return coherence, csd12, psd1, psd2, N, coh_spectrogram
+
+def _coherence_spectrogram(fftgram1, fftgram2, stride, segmentDuration, pad=False):
+    max_f = min(fftgram1.shape[1], fftgram2.shape[1])
+    csd12 = csdgram(fftgram1[:, 0:max_f], fftgram2[:, 0:max_f],
+                    stride, pad=pad)
+    if pad:
+        psd1 = np.abs(fftgram1[:, 0::2]) ** 2
+        psd2 = np.abs(fftgram2[:, 0::2]) ** 2
+    else:
+        psd1 = np.abs(fftgram1) ** 2
+        psd2 = np.abs(fftgram2) ** 2
+
+    # average over strides if necessary
+    if not segmentDuration:
+        segmentDuration = stride
+    if segmentDuration < stride:
+        raise ValueError('segmentDuration must be longer than or equal to stride')
+    if segmentDuration % stride:
+        raise ValueError('stride must evenly divide segmentDuration')
+
+    navgs = segmentDuration / stride
+    if not fftgram1.shape[0] % navgs:
+        print 'WARNING: will cut off last segment because segmentDuration doesnt evenly divide total time window'
+    nsegs = int(fftgram1.shape[0] / navgs)
+    nfreqs = csd12.frequencies.size
+    coh_spec = np.zeros((nsegs, nfreqs))
+    for i in range(nsegs):
+        idx1 = i*navgs
+        idx2 = idx1+navgs
+        coh_spec[i,:] = np.abs(np.mean(csd12[idx1:idx2,:],0) ** 2)\
+                        / ((np.mean(psd1[idx1:idx2,:nfreqs],0))\
+                        *  np.mean(psd2[idx1:idx2,:nfreqs],0))
+    coh_spec = Spectrogram(coh_spec, df=csd12.df, dt=segmentDuration, epoch=csd12.epoch, unit=None, name='coherence spectrogram')
+    return coh_spec
 
 
 def coherence_spectrogram(channel1, channel2, stride, segmentDuration,
@@ -345,7 +390,10 @@ def coherence_list(channel1, channels, stride, st=None, et=None,
 
 def coherence_from_list(darm_channel, channel_list,
                         stride, st, et, frames=False, save=False,
-                        pad=False, fhigh=None, subsystem=None):
+                        pad=False, fhigh=None, subsystem=None,
+                        spec_fhigh=None,spec_flow=None):
+    nargout = expecting()
+
 
     if isinstance(channel_list, str):
         channels = coh_io.read_list(channel_list)
@@ -368,9 +416,13 @@ def coherence_from_list(darm_channel, channel_list,
         data = _read_data(channel, st, et, frames=frames)
         if fhigh is not None and data.sample_rate.value > 2 * fhigh:
             data = data.resample(fhigh * 2)
+
         # get coherence
-        coh_temp, csd_temp, psd1_temp, psd2_temp, N = \
+        coh_temp, csd_temp, psd1_temp, psd2_temp, N, coh_spec = \
             coherence(fftgram1, data, stride, pad=pad)
+        plot_coherence_specgram(coh_spec,darm_channel, channel, st, et,
+                                fhigh=spec_high, flow=spec_flow)
+
         coherence_dict[channel] = coh_temp
         # save to coherence
         coh_temp.to_hdf5(f['coherences'], name=channel)
@@ -379,6 +431,23 @@ def coherence_from_list(darm_channel, channel_list,
     psd1_temp.to_hdf5(f['psd1'], name=darm_channel)
     f['info'] = N
     f.close()
+
+
+def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, fhigh=None, flow=None):
+    channel = channel.replace(':','-')
+    chan_pname = channel.replace('_','\_')
+    darm_chan_pname=darm_channel.replace('_','\_')
+    plot = coh_spec.plot(vmin=coh_spec.value.min(),vmax=1,norm='log')
+    ax = plot.gca()
+    if not fhigh:
+        fhigh = coh_spec.frequencies[-1]
+    if not flow:
+        flow = coh_spec.frequencies[0]
+    ax.set_ylim(flow,fhigh)
+    ax.set_title('Coherence between %s and %s'%chan_pname, darm_chan_pname,
+                 fontsize=12)
+    filename = coh_io.create_coherence_data_filename(darm_channel, channel, st, et)
+    plot.savefig(filename)
 
 
 def create_matrix_from_file(coh_file, channels):
@@ -438,3 +507,19 @@ def plot_coherence_matrix_from_file(darm_channel, channel_list, coh_file, subsys
     outfile = coh_file.split('.')[0]
     plot.savefig(outfile)
     plot.close()
+
+
+def expecting():
+    """Return how many values the caller is expecting"""
+    f = inspect.currentframe()
+    f = f.f_back.f_back
+    c = f.f_code
+    i = f.f_lasti
+    bytecode = c.co_code
+    instruction = ord(bytecode[i+3])
+    if instruction == dis.opmap['UNPACK_SEQUENCE']:
+        howmany = ord(bytecode[i+4])
+        return howmany
+    elif instruction == dis.opmap['POP_TOP']:
+        return 0
+    return 1
