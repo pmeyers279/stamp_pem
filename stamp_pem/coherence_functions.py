@@ -413,7 +413,8 @@ def coherence_list(channel1, channels, stride, st=None, et=None,
 def coherence_from_list(darm_channel, channels,
                         stride, st, et, frames=False, save=False,
                         pad=False, fhigh=None, subsystem=None,
-                        spec_fhigh=None,spec_flow=None, directory='./'):
+                        spec_fhigh=None,spec_flow=None, directory='./',
+                        segmentDuration=None):
     nargout = expecting()
 
     if not subsystem:
@@ -443,7 +444,7 @@ def coherence_from_list(darm_channel, channels,
 
         # get coherence
         coh_temp, csd_temp, psd1_temp, psd2_temp, N, coh_spec = \
-            coherence(fftgram1, data, stride, pad=pad)
+            coherence(fftgram1, data, stride, pad=pad, segmentDuration=segmentDuration)
 
         # plot coherence spectrogram
         plot = plot_coherence_specgram(coh_spec,darm_channel, channel, st, et,
@@ -468,7 +469,7 @@ def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, fhigh=None,
     channel = channel.replace(':','-')
     chan_pname = channel.replace('_','\_')
     darm_chan_pname=darm_channel.replace('_','\_')
-    plot = coh_spec.plot(vmin=coh_spec.value.min(),vmax=1,norm='log')
+    plot = coh_spec.plot(vmin=1e-3,vmax=1,norm='log')
     ax = plot.gca()
     if not fhigh:
         fhigh = coh_spec.frequencies[-1].value

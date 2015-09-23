@@ -64,7 +64,8 @@ if not params.subsystem:
         cf.coherence_from_list(params.channel1, chans, params.stride,
                                params.st, params.et, frames=params.frames,
                                save=True, pad=True, fhigh=int(params.fhigh),
-                               subsystem=sub, outputDir=params.dir)
+                               subsystem=sub, directory=params.dir,
+                               segmentDuration=params.sd)
 
         # generate filename used in calculating coherence from list
         outDir = coh_io.get_directory_structure(
@@ -85,7 +86,8 @@ else:
                            params.stride,
                            params.st, params.et, frames=params.frames,
                            save=True, pad=True, fhigh=int(params.fhigh),
-                           subsystem=params.subsystem, outputDir=params.dir)
+                           subsystem=params.subsystem, directory=params.dir,
+                           segmentDuration=params.sd)
 
     # generate filename used in calculating coherence from list
     outDir = coh_io.get_directory_structure(
