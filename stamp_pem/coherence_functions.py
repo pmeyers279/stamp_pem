@@ -517,9 +517,9 @@ def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=None
     plt.title(subsystem)
     plt.yticks(np.arange(1, len(labels) + 1) - 0.5, labels, fontsize=8)
     if not fhigh:
-        fhigh=frequencies[-1]
+        fhigh=frequencies[-1].value
     if not flow:
-        flow=frequencyes[0]
+        flow=frequencies[0].value
     ax.set_xlim(fhigh, flow)
     ax.set_xlabel('Frequency [Hz]')
     return plt

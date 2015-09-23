@@ -91,9 +91,9 @@ else:
 
     # generate filename used in calculating coherence from list
     outDir = coh_io.get_directory_structure(
-        sub, params.st, directory=params.dir)
+        params.subsystem, params.st, directory=params.dir)
     fname = coh_io.create_coherence_data_filename(
-        params.channel1, sub, params.st, params.et)
+        params.channel1, params.subsystem, params.st, params.et)
 
     # plot coherence matrix from file produced
     cf.plot_coherence_matrix_from_file(
