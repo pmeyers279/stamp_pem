@@ -168,7 +168,7 @@ def check_ini_params(pipeline_dict):
     try:
         stride = run_params['stride']
         darm_channel = run_params['darm_channel']
-        flag = run_params['dq_flag']
+        flag = run_params['flag']
     except KeyError:
         raise KeyError(
             'stride, darm_channel, and dq flag must be in the ini file')
