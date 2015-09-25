@@ -2,6 +2,7 @@ from stamp_pem import coh_io
 from glue import pipeline
 import optparse
 from gwpy.segments import DataQualityFlag
+import os
 
 
 def parse_command_line():
@@ -23,7 +24,7 @@ def parse_command_line():
     return params
 
 
-def build_arg(env_params, run_params, st, et):
+def build_arg(env_params, run_params):
     flags = {}
     flags['-list'] = env_params['list']
     flags['s'] = '$(st)'
@@ -67,7 +68,8 @@ if not coh_io.check_channel_and_flag(darm_channel, flag):
     raise ValueError('channel and flag are not for same IFO!')
 
 # get and write DQ segments:
-segs = DataQualityFlag.query_dqsegdb(flag, st, et)
+segs = DataQualityFlag.query_dqsegdb(
+    flag, st, et, url='https://segments.ligo.org')
 seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et)
 segs.write('%s.xml.gz' % (seg_file))
 
@@ -75,7 +77,7 @@ segs.write('%s.xml.gz' % (seg_file))
 datajob = pipeline.CondorDAGJob('vanilla', env_params['executable'])
 datajob2 = pipeline.CondorDAGJob(
     'vanilla', env_params['combine_executable'])
-dag = pipeline.CondorDAGJob(
+dag = pipeline.CondorDAG(
     '/usr1/%s/$(subsystem).log' % (env_params['user']))
 coh_io.create_directory_structure(
     channel_dict.keys(), st, directory=env_params['base_directory'])
@@ -88,9 +90,9 @@ for subsystem in channel_dict.keys():
         seg_st = seg[0].seconds
         seg_et = seg[1].seconds
         job = pipeline.CondorDAGJob('vanilla', env_params['executable'])
-        job.set_sub_file('%s/%s-%d-%d.sub',
+        job.set_sub_file('%s/%s-%d-%d.sub' % (
                          dag_dir, darm_channel.replace(':', '-'),
-                         seg_st, seg_et)
+                         seg_st, seg_et))
         job.set_stderr_file(
             '/usr1/%s/$(subsystem).err' % (env_params['user']))
         job.set_stdout_file(
@@ -103,7 +105,7 @@ for subsystem in channel_dict.keys():
 for subsystem in channel_dict.keys():
     job = pipeline.CondorDAGJob(
         'vanilla', env_params['combine_executable'])
-    job.set_sub_file('%s/combine_jobs-%d-%d.sub', dag_dir, st, et)
+    job.set_sub_file('%s/combine_jobs-%d-%d.sub' % (dag_dir, st, et))
     job.set_stderr_file(
         '/usr1/%s/$(subsystem)-combine.err' % env_params['user'])
     job.set_stdout_file(
@@ -116,8 +118,11 @@ dagName = '%s/%s-%d-%d' % (
     dag_dir, darm_channel.replace(':', '-'), st, et)
 
 # datajob info
-datajob.set_sub_file('%s/%s-%d-%d.sub',
-                     darm_channel.replace(':', '-'), st, et)
+datajob_sub = '%s/%s-%d-%d.sub' % (
+    dag_dir, darm_channel.replace(':', '-'), st, et)
+datajob.set_sub_file(datajob_sub)
+
+datajob2_sub = '%s/combine_jobs-%d-%d.sub' % (dag_dir, st, et)
 datajob.set_stderr_file(
     '/usr1/%s/$(subsystem).err' % (env_params['user']))
 datajob.set_stdout_file(
@@ -126,7 +131,7 @@ datajob.set_log_file(
     '/usr1/%s/$(subsystem).out' % (env_params['user']))
 
 # combine jobs post processing info
-datajob2.set_sub_file('%s/combine_jobs-%d-%d.sub', dag_dir, st, et)
+datajob2.set_sub_file(datajob2_sub)
 datajob2.set_stderr_file(
     '/usr1/%s/$(subsystem)-combine.err' % env_params['user'])
 datajob2.set_stdout_file(
@@ -140,4 +145,17 @@ datajob2.add_arg('-s %s -e %s --subsystem $(subsystem) --darm-channel %s')
 datajob.write_sub_file()
 datajob2.write_sub_file()
 dag.set_dag_file(dagName)
-dag.write_dag
+dag.write_dag()
+
+cmd = 'echo accounting_group=ligo.prod.o1.detchar.syswide_coh.stamp_pem >> %s' % (
+    datajob_sub)
+os.system(cmd)
+cmd2 = 'echo accounting_group=ligo.prod.o1.detchar.syswide_coh.stamp_pem >> %s' % (
+    datajob_sub)
+os.system(cmd2)
+cmd3 = 'echo accounting_group_user=patrick.meyers >> %s' % (
+    datajob_sub)
+os.system(cmd3)
+cmd4 = 'echo accounting_group_user=patrick.meyers >> %s' % (
+    datajob_sub)
+os.system(cmd4)
