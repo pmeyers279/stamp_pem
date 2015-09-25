@@ -151,11 +151,15 @@ cmd = 'echo accounting_group=ligo.prod.o1.detchar.syswide_coh.stamp_pem >> %s' %
     datajob_sub)
 os.system(cmd)
 cmd2 = 'echo accounting_group=ligo.prod.o1.detchar.syswide_coh.stamp_pem >> %s' % (
-    datajob_sub)
+    datajob2_sub)
 os.system(cmd2)
 cmd3 = 'echo accounting_group_user=patrick.meyers >> %s' % (
     datajob_sub)
 os.system(cmd3)
 cmd4 = 'echo accounting_group_user=patrick.meyers >> %s' % (
-    datajob_sub)
+    datajob2_sub)
 os.system(cmd4)
+cmd5 = 'echo getEnv = True >> %s' % (datajob_sub)
+os.system(cmd5)
+cmd6 = 'echo getEnv = True >> %s' % (datajob2_sub)
+os.system(cmd6)
