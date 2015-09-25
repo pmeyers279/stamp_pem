@@ -9,6 +9,7 @@ from matplotlib.colors import LogNorm
 import h5py
 import coh_io
 import inspect,dis
+from gwpy.segments import Segment
 
 
 
@@ -498,6 +499,7 @@ def coherence_from_list(darm_channel, channels,
         psd2_temp.to_hdf5(f['psd2s'], name=channel)
     psd1_temp.to_hdf5(f['psd1'], name=darm_channel)
     f['info'] = N
+    f['seg'] = Segment(st, et)
     f.close()
 
 

@@ -70,7 +70,8 @@ if not coh_io.check_channel_and_flag(darm_channel, flag):
 # get and write DQ segments:
 segs = DataQualityFlag.query_dqsegdb(
     flag, st, et, url='https://segments.ligo.org')
-seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et)
+seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et,
+                                                 directory=env_params['base_directory'])
 segs.write('%s.xml.gz' % (seg_file))
 
 
@@ -141,7 +142,8 @@ datajob2.set_log_file(
 arg = build_arg(env_params, run_params)
 print 'ARG = %s' % arg
 datajob.add_arg(arg)
-datajob2.add_arg('-s %s -e %s --subsystem $(subsystem) --darm-channel %s')
+datajob2.add_arg('-s %d -e %d --subsystem $(subsystem) --darm-channel %s --flag %s --directory %s' % (
+                 st, et, darm_channel, flag, env_params['base_directory']))
 datajob.write_sub_file()
 datajob2.write_sub_file()
 dag.set_dag_file(dagName)

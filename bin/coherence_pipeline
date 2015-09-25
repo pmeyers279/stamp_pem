@@ -42,6 +42,12 @@ def parse_command_line():
     parser.add_option(
         "--subsystem", dest='subsystem', type=str, help='subsystem',
         default=None)
+    parser.add_option(
+        "--spec-flow", dest="spec_flow", type=float,
+        help='specgtrogram low frequency', default=None)
+    parser.add_option(
+        "--spec-fhigh", dest="spec_fhigh", type=float,
+        help=' spectrogram high frequency', default=None)
     params, args = parser.parse_args()
     return params
 
@@ -65,7 +71,9 @@ if not params.subsystem:
                                params.st, params.et, frames=params.frames,
                                save=True, pad=True, fhigh=int(params.fhigh),
                                subsystem=sub, directory=params.dir,
-                               segmentDuration=params.sd)
+                               segmentDuration=params.sd,
+                               spec_fhigh=params.spec_fhigh,
+                               spec_flow=params.spec_fhigh)
 
         # generate filename used in calculating coherence from list
         outDir = coh_io.get_directory_structure(
@@ -87,7 +95,9 @@ else:
                            params.st, params.et, frames=params.frames,
                            save=True, pad=True, fhigh=int(params.fhigh),
                            subsystem=params.subsystem, directory=params.dir,
-                           segmentDuration=params.sd)
+                           segmentDuration=params.sd,
+                           spec_fhigh=params.spec_fhigh,
+                           spec_flow=params.spec_fhigh)
 
     # generate filename used in calculating coherence from list
     outDir = coh_io.get_directory_structure(
