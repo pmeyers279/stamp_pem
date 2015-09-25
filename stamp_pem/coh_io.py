@@ -1,5 +1,6 @@
 import ConfigParser
 import os
+from gwpy.segments import DataQualityFlag
 
 
 def config_section_map(c, section):
@@ -17,6 +18,21 @@ def config_list(c):
     return dict1
 
 
+def config_pipeline_ini(c):
+    dict1 = {}
+    for section in c.sections():
+        dict1[section] = config_section_map(c, section)
+    return dict1
+
+
+def read_pipeline_ini(file):
+    """
+    read ini file for analysis
+    """
+    c = ConfigParser.ConfigParser()
+    c.read(file)
+
+
 def read_list(list):
     """
     read channel list from file
@@ -24,6 +40,13 @@ def read_list(list):
     c = ConfigParser.ConfigParser()
     c.read(list)
     channels = config_list(c)
+    return channels
+
+
+def extract_subsystem(channel_dict, subsystem):
+    channels = []
+    for chan in channel_dict[subsystem].keys():
+        channels.append(chan)
     return channels
 
 
@@ -48,7 +71,125 @@ def get_directory_structure(subsystem, st, directory='./', specgram=False):
 
 
 def create_directory_structure(subsystems, st, directory='./'):
+    subsystems.append('SEGMENTS')
+    subsystems.append('DAGS')
     for subsystem in subsystems:
         cmd = 'mkdir -p %s/%s/%s/%s' % (directory, subsystem,
                                         str(st)[0:5], 'plots')
         os.system(cmd)
+
+
+def write_segs(flag, st, et, directory='./'):
+    segments = DataQualityFlag.query_dqsegdb(flag, st, et,
+                                             url='https://segments.ligo.org')
+    directory = get_directory_structure('SEGMENTS', st, directory=directory)
+    segments.write('%s/%s-%d-%d.xml.gz' % (directory, flag, st, (et - st)))
+
+
+def increment_datetime(time, increment):
+    """
+    Increment a gps time
+
+    Parameters:
+    ----------
+    time : int
+        start gps time
+    increment : int
+        time in (s) to increment by
+
+    Returns:
+    --------
+    incremented_time : int
+        time + increment
+    """
+    time += increment
+    return time
+
+
+def increment_datetime_in_file(f, increment):
+    """
+    increment gps time from file
+
+    Parameters:
+    -----------
+    f : str
+        file to increment
+    increment : int
+        amount of time by which to increment
+    """
+    l = read_time_from_file(f)
+    new_time = increment_datetime(l, increment)
+    write_time_to_file(f, new_time)
+
+
+def read_time_from_file(f):
+    f = open(f, 'r')
+    l = int(f.read().rstrip())
+    f.close()
+    return l
+
+
+def write_time_to_file(f, time):
+    f = open(f, 'w')
+    f.write(str(time))
+    f.close()
+
+
+def get_channel_dict_from_ascii(ascii_file, subsystems):
+    channels = {}
+    for sub in subsystems:
+        f = open(ascii_file, 'r')
+        counter = 0
+        for line in f:
+            if line[0] == '#' or len(line.split(':')) < 2:
+                continue
+            chan = line.split(':')[1]
+            sub_temp = chan.split('_')[0]
+            if sub in sub_temp:
+                counter += 1
+                channels[sub][str(counter)] = line
+        f.close()
+    return channels
+
+def check_channel_and_flag(channel, flag):
+    ifo1 = channel.split(':')[0]
+    ifo2 = channel.split(':')[0]
+    if ifo1 == ifo2:
+        return True
+    else:
+        return False
+
+
+def check_ini_params(pipeline_dict):
+    env_params = pipeline_dict['env']
+    run_params = pipeline_dict['run']
+    try:
+        stride = run_params['stride']
+        darm_channel = run_params['darm_channel']
+        flag = run_params['dq_flag']
+    except KeyError:
+        raise KeyError(
+            'stride, darm_channel, and dq flag must be in the ini file')
+
+    try:
+        segmentDuration = run_params['segmentDuration']
+    except KeyError:
+        run_params['segmentDuration'] = stride
+        print 'segmentDuration not set. setting it to stride'
+
+    try:
+        fhigh = run_params['fhigh']
+    except KeyError:
+        print 'fhigh not seg. setting it to 16kHz'
+        run_params['fhigh'] = 16384
+
+    try:
+        spec_fhigh = run_params['spec_fhigh']
+    except KeyError:
+        run_params['spec_fhigh'] = None
+
+    try:
+        spec_flow = run_params['spec_flow']
+    except KeyError:
+        run_params['spec_flow'] = None
+    return env_params, run_params

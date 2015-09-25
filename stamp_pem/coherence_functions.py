@@ -411,10 +411,46 @@ def coherence_list(channel1, channels, stride, st=None, et=None,
 
 
 def coherence_from_list(darm_channel, channels,
-                        stride, st, et, frames=False, save=False,
+                        stride, st, et, frames=False, 
                         pad=False, fhigh=None, subsystem=None,
                         spec_fhigh=None,spec_flow=None, directory='./',
                         segmentDuration=None):
+    """
+    Takes coherence from a list of channels and saves it to a file.
+    Parameters:
+    -----------
+    darm_channel : str
+        DARM channel to use for analysis
+    channels : list (str)
+        Auxiiliary channels to use for analysis
+    stride : float
+        fft length (in seconds). Must evenly divide sample rate
+        of channels you plan to use (or resample to)
+    st : int
+        Start time for analysis
+    et : int
+        End time for analysis
+    frames : bool (optional)
+        Decides whether to read from frames or NDS2
+        (default NDS2)
+    pad : bool (optional)
+        Decides whether or not to zero pad before taking
+        coherence (defaults to False).
+    fhigh : float (optional)
+        High frequency for analysis. Will resample channels
+        to save computational time of possible. Recommended 
+        to use power of 2.
+    subsystem : str (optional)
+        Subsystem for analysis (used in saving file. defaults to 'CHANS')
+    spec_fhigh : float (optional)
+        High frequency for plotting coherence spectrogram
+    spec_flow :  float (optional)
+        Low frequency for plotting coherence spectrogram
+    directory : str
+        Base directory for saving output file
+    segmentDuration : float
+        Duration of coherence spectrogram pixels. must be >= stride. 
+    """
     nargout = expecting()
 
     if not subsystem:
@@ -466,6 +502,31 @@ def coherence_from_list(darm_channel, channels,
 
 
 def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, fhigh=None, flow=None):
+    """
+    Plots coherence spectrogram
+
+    Parameters: 
+    -----------
+    coh_spec : Spectrogram object
+        Coherence spectrogram 
+    darm_channel : str
+        DARM channel used in analysis
+    channel : str
+        Auxiliary channel used in analysis
+    st : int
+        start time for coherence spectrogram
+    et : int 
+        end time for coherence spectrogram
+    fhigh : float (optional)
+        high frequency for plotting
+    flow : float (optional)
+        low frequency for plotting
+
+    Returns:
+    --------
+    plot : matplotlib object
+        plot object with ylimits set to fhigh and flow
+    """
     channel = channel.replace(':','-')
     chan_pname = channel.replace('_','\_')
     darm_channel = darm_channel.replace(':','-')
@@ -484,6 +545,33 @@ def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, fhigh=None,
 
 
 def create_matrix_from_file(coh_file, channels):
+    """
+    Creates coherence matrix from data that's in a file.
+    Used typically as helper function for plotting
+
+    Parameters:
+    -----------
+    coh_file : str
+        File containing coherence data
+    channels : list (str)
+        channels to plot
+
+    Returns: 
+    --------
+    coh_matrix : Spectrogram object
+        coherence matrix in form of spectrogram object
+        returns automatically in terms of coherence SNR:
+        coherence * N.
+        (not actually a spectrogram, though)
+    frequencies : numpy array
+        numpy array of frequencies associated with coherence matrix
+    labels : list (str)
+        labels for coherence matrix
+    N : int
+        Number of time segment used to create coherence spectra
+
+
+    """
     labels = []
     counter = 0
     f = h5py.File(coh_file, 'r')
@@ -504,6 +592,29 @@ def create_matrix_from_file(coh_file, channels):
     return coh_matrix, darm_psd.frequencies.value, labels, N
 
 def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=None, flow=None):
+    """
+    plots coherence matrix.
+
+    Parameters:
+    -----------
+        coh_matrix : spectrogram object
+            Contains coherence spectra for many channels.
+            Not actually a spectrogram. Just using the object.
+        labels :  list
+            list of labels for channels in coh_matrix
+        frequencies : list
+            list of frequencies in coherence spectrum
+        subsystem : str
+            subsystem we're plotting
+        fhigh : float, optional
+            highest frequency for plotting
+        flow : float, optional
+            lowest frequency for plotting
+
+    Returns:
+    --------
+        matplotlib plot object
+    """
     my_dpi = 100
     for label in labels:
         label = label.replace(subsystem,'')
@@ -520,12 +631,34 @@ def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=None
         fhigh=frequencies[-1]
     if not flow:
         flow=frequencies[0]
-    ax.set_xlim(fhigh, flow)
+    ax.set_xlim(flow, fhigh)
     ax.set_xlabel('Frequency [Hz]')
     return plt
 
 
 def plot_coherence_matrix_from_file(darm_channel, channel_list, coh_file, subsystem=None, fhigh=None, flow=None):
+    """
+    Plots coherence matrix from file
+
+    Parameters:
+    -----------
+        darm_channel : str
+            channel that all other channels were xcorred against
+        channel_list : str or dict
+            list of channels to plot
+        coh_file : str
+            coherence file to load
+        subsystem : str
+            subsystem to plot (used in loading from list)
+        fhigh : float, optional
+            high frequency for plotting
+        flow : float, optional
+            low frequency for plotting 
+
+    Returns:
+    --------
+        NONE: saves plot
+    """
     labels = []
     counter = 0
     if isinstance(channel_list, str):
