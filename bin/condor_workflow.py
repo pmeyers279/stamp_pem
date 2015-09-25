@@ -138,6 +138,8 @@ for seg in segs.active:
     print 'ARG = %s' % arg
     datajob.add_arg(arg)
     datajob2.add_arg('-s %s -e %s --subsystem $(subsystem) --darm-channel %s')
+    datajob.write_sub_file()
+    datajob2.write_sub_file()
     dag.set_dag_file(dagName)
     dag.write_dag
 
