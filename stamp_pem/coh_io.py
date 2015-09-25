@@ -31,6 +31,8 @@ def read_pipeline_ini(file):
     """
     c = ConfigParser.ConfigParser()
     c.read(file)
+    dict1 = config_pipeline_ini(c)
+    return dict1
 
 
 def read_list(list):
