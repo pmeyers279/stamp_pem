@@ -505,7 +505,7 @@ def coherence_from_list(darm_channel, channels,
     if len(failed_channels):
         f['failed_channels'] = failed_channels
     else:
-        f['failed_channels'] = None
+        f['failed_channels'] = 'None'
     f.close()
 
 
