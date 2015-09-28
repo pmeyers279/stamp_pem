@@ -1,6 +1,7 @@
 import ConfigParser
 import os
 from gwpy.segments import DataQualityFlag
+from stamp_pem import coherence_functions as cf
 
 
 def config_section_map(c, section):
@@ -28,6 +29,14 @@ def config_pipeline_ini(c):
 def read_pipeline_ini(file):
     """
     read ini file for analysis
+    Parameters:
+    -----------
+    file : str
+        ini file for coherence pipeline
+    Returns:
+    --------
+    dict1 : dict
+        dictionary with parameters for pipeline
     """
     c = ConfigParser.ConfigParser()
     c.read(file)
@@ -38,6 +47,17 @@ def read_pipeline_ini(file):
 def read_list(list):
     """
     read channel list from file
+
+    Parameters:
+    -----------
+    list : str
+        file with list of channels in ini format
+    Returns:
+    --------
+        channels : dict
+            channels in dict formaat with first keys
+            as subsystems, second as numerals that
+            reference channel names
     """
     c = ConfigParser.ConfigParser()
     c.read(list)
@@ -46,9 +66,24 @@ def read_list(list):
 
 
 def extract_subsystem(channel_dict, subsystem):
+    """
+    extract channels into list form from channel_dict
+
+    Parameters:
+    -----------
+    channel_dict : dict
+        channel dictionary
+    subsystem : str
+        subsystem tag
+
+    Returns:
+    --------
+    channels : list (str)
+        list of channels from that subsystem
+    """
     channels = []
     for chan in channel_dict[subsystem].keys():
-        channels.append(chan)
+        channels.append(channel_dict[subsystem][chan])
     return channels
 
 
@@ -153,6 +188,7 @@ def get_channel_dict_from_ascii(ascii_file, subsystems):
         f.close()
     return channels
 
+
 def check_channel_and_flag(channel, flag):
     ifo1 = channel.split(':')[0]
     ifo2 = channel.split(':')[0]
@@ -195,3 +231,17 @@ def check_ini_params(pipeline_dict):
     except KeyError:
         run_params['spec_flow'] = None
     return env_params, run_params
+
+
+def check_channels(channels, st):
+    counter = 0
+    failed_chans = []
+    for channel in channels:
+        try:
+            data = cf._read_data(channel, st, st + 1)
+        except RuntimeError:
+            failed_chans.append(channel)
+            del channels[counter]
+
+        counter += 1
+    return channels, failed_chans

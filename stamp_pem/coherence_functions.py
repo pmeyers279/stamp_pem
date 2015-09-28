@@ -457,6 +457,8 @@ def coherence_from_list(darm_channel, channels,
     if not subsystem:
         subsystem='CHANS'
 
+    channels, failed_channels = coh_io.check_channels(channels, st)
+
     darm = _read_data(darm_channel, st, et, frames=frames)
     if fhigh is not None:
         darm = darm.resample(fhigh * 2)
@@ -500,6 +502,7 @@ def coherence_from_list(darm_channel, channels,
     psd1_temp.to_hdf5(f['psd1'], name=darm_channel)
     f['info'] = N
     f['seg'] = Segment(st, et)
+    f['failed_channels'] = failed_channels
     f.close()
 
 
