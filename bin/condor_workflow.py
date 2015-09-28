@@ -98,23 +98,23 @@ for subsystem in channel_dict.keys():
                          dag_dir, darm_channel.replace(':', '-'),
                          seg_st, seg_et))
         job.set_stderr_file(
-            '/usr1/%s/$(subsystem).err' % (env_params['user']))
+            '%s/$(subsystem).err' % (dag_dir))
         job.set_stdout_file(
-            '/usr1/%s/$(subsystem).out' % (env_params['user']))
+            '%s/$(subsystem).out' % (dag_dir))
         node = pipeline.CondorDAGNode(job)
         node.add_macro("subsystem", subsystem)
         node.add_macro("st", seg_st)
         node.add_macro("et", seg_et)
-        sub_node[subsystem] =  node
+        sub_node[subsystem] = node
         dag.add_node(node)
 for subsystem in channel_dict.keys():
     job = pipeline.CondorDAGJob(
         'vanilla', env_params['combine_executable'])
     job.set_sub_file('%s/combine_jobs-%d-%d.sub' % (dag_dir, st, et))
     job.set_stderr_file(
-        '/usr1/%s/$(subsystem)-combine.err' % env_params['user'])
+        '%s/$(subsystem)-combine.err' % dag_dir)
     job.set_stdout_file(
-        '/usr1/%s/$(subsystem)-combine.out' % env_params['user'])
+        '%s/$(subsystem)-combine.out' % dag_dir)
     node = pipeline.CondorDAGNode(job)
     node.add_macro('subsystem', subsystem)
     node.add_parent(sub_node[subsystem])
@@ -130,18 +130,18 @@ datajob.set_sub_file(datajob_sub)
 
 datajob2_sub = '%s/combine_jobs-%d-%d.sub' % (dag_dir, st, et)
 datajob.set_stderr_file(
-    '/usr1/%s/$(subsystem).err' % (env_params['user']))
+    '%s/$(subsystem).err' % (dag_dir))
 datajob.set_stdout_file(
-    '/usr1/%s/$(subsystem).out' % (env_params['user']))
+    '%s/$(subsystem).out' % (dag_dir))
 datajob.set_log_file(
-    '/usr1/%s/$(subsystem).log' % (env_params['user']))
+    '%s/$(subsystem).log' % (dag_dir))
 
 # combine jobs post processing info
 datajob2.set_sub_file(datajob2_sub)
 datajob2.set_stderr_file(
-    '/usr1/%s/$(subsystem)-combine.err' % env_params['user'])
+    '%s/$(subsystem)-combine.err' % (dag_dir))
 datajob2.set_stdout_file(
-    '/usr1/%s/$(subsystem)-combine.out' % env_params['user'])
+    '%s/$(subsystem)-combine.out' % (dag_dir))
 datajob2.set_log_file(
     '/usr1/%s/$(subsystem)-combine.log' % env_params['user'])
 arg = build_arg(env_params, run_params)
