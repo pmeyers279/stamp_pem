@@ -91,3 +91,4 @@ if counter > 1:
     new_f['info'] = data['info']
     psd1_temp.to_hdf5(new_f['psd1'], name=params.darm_channel)
     new_f['segments'] = segs
+    new_file.close()
