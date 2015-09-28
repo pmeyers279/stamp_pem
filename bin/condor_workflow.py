@@ -71,8 +71,9 @@ if not coh_io.check_channel_and_flag(darm_channel, flag):
 # get and write DQ segments:
 segs = DataQualityFlag.query_dqsegdb(
     flag, st, et, url='https://segments.ligo.org')
+seg_dir = coh_io.get_directory_structure('SEGMENTS', st, env_params['base_directory'])
 seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et,
-                                                 directory=env_params['base_directory'])
+                                                 directory=seg_dir)
 segs.write('%s.xml.gz' % (seg_file))
 
 

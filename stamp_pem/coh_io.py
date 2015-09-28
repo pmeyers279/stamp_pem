@@ -94,9 +94,9 @@ def create_coherence_data_filename(darm_channel, subsystem, st, et,
         str(st) + '-' + str(et - st)
     chan = darm_channel.replace(':', '-')
     if tag:
-        filename = '%s-%s-%s-%d-%d' % (chan, subsystem, tag, st, et - st)
+        filename = '%s/%s-%s-%s-%d-%d' % (directory, chan, subsystem, tag, st, et - st)
     else:
-        filename = '%s-%s-%d-%d' % (chan, subsystem, st, et - st)
+        filename = '%s/%s-%s-%d-%d' % (directory, chan, subsystem, st, et - st)
     return filename
 
 
