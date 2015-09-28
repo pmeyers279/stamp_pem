@@ -1,7 +1,7 @@
 import ConfigParser
 import os
 from gwpy.segments import DataQualityFlag
-from stamp_pem import coherence_functions as cf
+import coherence_functions as cf
 
 
 def config_section_map(c, section):
