@@ -87,7 +87,7 @@ coh_io.create_directory_structure(
 
 dag_dir = coh_io.get_directory_structure(
     'DAGS', st, env_params['base_directory'])
-
+sub_node = {}
 for subsystem in channel_dict.keys():
     for seg in segs.active:
         seg_st = seg[0].seconds
@@ -104,6 +104,7 @@ for subsystem in channel_dict.keys():
         node.add_macro("subsystem", subsystem)
         node.add_macro("st", seg_st)
         node.add_macro("et", seg_et)
+        sub_node[subsystem] =  node
         dag.add_node(node)
 for subsystem in channel_dict.keys():
     job = pipeline.CondorDAGJob(
@@ -115,6 +116,7 @@ for subsystem in channel_dict.keys():
         '/usr1/%s/$(subsystem)-combine.out' % env_params['user'])
     node = pipeline.CondorDAGNode(job)
     node.add_macro('subsystem', subsystem)
+    node.add_parent(sub_node[subsystem])
     dag.add_node(node)
 
 dagName = '%s/%s-%d-%d' % (
