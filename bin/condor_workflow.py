@@ -35,6 +35,7 @@ def build_arg(env_params, run_params):
     flags['-subsystem'] = '$(subsystem)'
     flags['-segment-duration'] = str(run_params['segmentDuration'])
     flags['d'] = str(env_params['base_directory'])
+    flags['-frames'] = 1
     if run_params['spec_fhigh']:
         flags['-spec-fhigh'] = str(run_params['spec_fhigh'])
     if run_params['spec_flow']:
@@ -133,7 +134,7 @@ datajob.set_stderr_file(
 datajob.set_stdout_file(
     '/usr1/%s/$(subsystem).out' % (env_params['user']))
 datajob.set_log_file(
-    '/usr1/%s/$(subsystem).out' % (env_params['user']))
+    '/usr1/%s/$(subsystem).log' % (env_params['user']))
 
 # combine jobs post processing info
 datajob2.set_sub_file(datajob2_sub)
