@@ -144,24 +144,13 @@ print 'ARG = %s' % arg
 datajob.add_arg(arg)
 datajob2.add_arg('-s %d -e %d --subsystem $(subsystem) --darm-channel %s --flag %s --directory %s' % (
                  st, et, darm_channel, flag, env_params['base_directory']))
+datajob.add_condor_cmd('getEnv', 'True')
+datajob2.add_condor_cmd('getEnv', 'True')
+datajob.add_condor_cmd('accounting_group', env_params['accounting_tag'])
+datajob2.add_condor_cmd('accounting_group', env_params['accounting_tag'])
+datajob.add_condor_cmd('accounting_group_user', env_params['accounting_user'])
+datajob2.add_condor_cmd('accounting_group_user', env_params['accounting_user'])
 datajob.write_sub_file()
 datajob2.write_sub_file()
 dag.set_dag_file(dagName)
 dag.write_dag()
-
-cmd = 'echo accounting_group=ligo.prod.o1.detchar.syswide_coh.stamp_pem >> %s' % (
-    datajob_sub)
-os.system(cmd)
-cmd2 = 'echo accounting_group=ligo.prod.o1.detchar.syswide_coh.stamp_pem >> %s' % (
-    datajob2_sub)
-os.system(cmd2)
-cmd3 = 'echo accounting_group_user=patrick.meyers >> %s' % (
-    datajob_sub)
-os.system(cmd3)
-cmd4 = 'echo accounting_group_user=patrick.meyers >> %s' % (
-    datajob2_sub)
-os.system(cmd4)
-cmd5 = 'echo getEnv = True >> %s' % (datajob_sub)
-os.system(cmd5)
-cmd6 = 'echo getEnv = True >> %s' % (datajob2_sub)
-os.system(cmd6)

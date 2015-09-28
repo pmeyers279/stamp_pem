@@ -502,7 +502,10 @@ def coherence_from_list(darm_channel, channels,
     psd1_temp.to_hdf5(f['psd1'], name=darm_channel)
     f['info'] = N
     f['seg'] = Segment(st, et)
-    f['failed_channels'] = failed_channels
+    if len(failed_channels):
+        f['failed_channels'] = failed_channels
+    else:
+        f['failed_channels'] = None
     f.close()
 
 

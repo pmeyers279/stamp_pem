@@ -69,7 +69,7 @@ if not params.subsystem:
         # calculate coherence from list
         cf.coherence_from_list(params.channel1, chans, params.stride,
                                params.st, params.et, frames=params.frames,
-                               save=True, pad=True, fhigh=int(params.fhigh),
+                               pad=True, fhigh=int(params.fhigh),
                                subsystem=sub, directory=params.dir,
                                segmentDuration=params.sd,
                                spec_fhigh=params.spec_fhigh,
@@ -93,7 +93,7 @@ else:
     cf.coherence_from_list(params.channel1, chans,
                            params.stride,
                            params.st, params.et, frames=params.frames,
-                           save=True, pad=True, fhigh=int(params.fhigh),
+                           pad=True, fhigh=int(params.fhigh),
                            subsystem=params.subsystem, directory=params.dir,
                            segmentDuration=params.sd,
                            spec_fhigh=params.spec_fhigh,
