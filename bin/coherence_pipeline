@@ -14,8 +14,8 @@ def parse_command_line():
     """
     parser = optparse.OptionParser()
     parser.add_option(
-        "--channel1", help="channel 1", default='L1:GDS-CALIB_STRAIN',
-        type=str)
+        "--darm-channel", help="channel 1", default='L1:GDS-CALIB_STRAIN',
+        type=str, dest="channel1")
     parser.add_option(
         "--list", help="file containing channel list", default=None,
         type=str)
@@ -35,7 +35,7 @@ def parse_command_line():
         "--frames", help="read from frames as opposed to nds", type=int,
         default=False)
     parser.add_option(
-        "-d", help="plot directory", type=str, default="./", dest='dir')
+        "--directory", "-d", help="plot directory", type=str, default="./", dest='dir')
     parser.add_option(
         "--segment-duration", dest='sd', help="segment duration for specgram",
         type=float, default=None)

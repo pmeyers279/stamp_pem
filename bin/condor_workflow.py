@@ -34,6 +34,7 @@ def build_arg(env_params, run_params):
     flags['-stride'] = str(run_params['stride'])
     flags['-subsystem'] = '$(subsystem)'
     flags['-segment-duration'] = str(run_params['segmentDuration'])
+    flags['d'] = str(env_params['base_directory'])
     if run_params['spec_fhigh']:
         flags['-spec-fhigh'] = str(run_params['spec_fhigh'])
     if run_params['spec_flow']:
