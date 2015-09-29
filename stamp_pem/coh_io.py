@@ -110,6 +110,7 @@ def get_directory_structure(subsystem, st, directory='./', specgram=False):
 def create_directory_structure(subsystems, st, directory='./'):
     subsystems.append('SEGMENTS')
     subsystems.append('DAGS')
+    subsystems.append('HTML')
     for subsystem in subsystems:
         cmd = 'mkdir -p %s/%s/%s/%s' % (directory, subsystem,
                                         str(st)[0:5], 'plots')
