@@ -586,13 +586,14 @@ def create_matrix_from_file(coh_file, channels):
     # get number of averages
     N = f['info'].value
     failed_channels = f['failed_channels'].value
+    print failed_channels
     First = 1
     for channel in channels:
         if First:
             # initialize matrix!
             darm_psd = Spectrum.from_hdf5(f['psd1'][f['psd1'].keys()[0]])
             First = 0
-            if isinstance(failed_channels, str)
+            if isinstance(failed_channels, str):
                 coh_matrix = np.zeros((darm_psd.size, len(channels)))
             else:
                 coh_matrix = np.zeros((darm_psd.size, (len(channels) - len(failed_channels))))

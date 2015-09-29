@@ -34,7 +34,7 @@ def parse_command_line():
 params = parse_command_line()
 
 seg_dir = coh_io.get_directory_structure(
-    'SEGMENTS', st, env_params['base_directory'])
+    'SEGMENTS', params.st, params.directory)
 
 segs_file = coh_io.create_coherence_data_filename(params.flag, 'SEGMENTS',
                                                   params.st, params.et,
