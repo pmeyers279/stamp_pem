@@ -94,7 +94,8 @@ def create_coherence_data_filename(darm_channel, subsystem, st, et,
         str(st) + '-' + str(et - st)
     chan = darm_channel.replace(':', '-')
     if tag:
-        filename = '%s/%s-%s-%s-%d-%d' % (directory, chan, subsystem, tag, st, et - st)
+        filename = '%s/%s-%s-%s-%d-%d' % (directory,
+                                          chan, subsystem, tag, st, et - st)
     else:
         filename = '%s/%s-%s-%d-%d' % (directory, chan, subsystem, st, et - st)
     return filename
@@ -239,7 +240,7 @@ def check_channels(channels, st):
     failed_chans = []
     for channel in channels:
         try:
-            data = cf._read_data(channel, st, st + 1)
+            data = cf._read_data(channel, st, st + 1, frames=True)
         except RuntimeError:
             failed_chans.append(channel)
             del channels[counter]
