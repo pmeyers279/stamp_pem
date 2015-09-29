@@ -259,7 +259,9 @@ def _coherence_spectrogram(fftgram1, fftgram2, stride, segmentDuration, pad=Fals
         coh_spec[i,:] = np.abs(np.mean(csd12[idx1:idx2,:],0) ** 2)\
                         / ((np.mean(psd1[idx1:idx2,:nfreqs],0))\
                         *  np.mean(psd2[idx1:idx2,:nfreqs],0))
-    coh_spec = Spectrogram(coh_spec, df=csd12.df, dt=segmentDuration, epoch=csd12.epoch, unit=None, name='coherence spectrogram')
+    coh_spec = Spectrogram(coh_spec, df=csd12.df, dt=segmentDuration,
+                           epoch=csd12.epoch, unit=None,
+                           name='coherence spectrogram')
     return coh_spec
 
 
@@ -577,8 +579,6 @@ def create_matrix_from_file(coh_file, channels):
         labels for coherence matrix
     N : int
         Number of time segment used to create coherence spectra
-
-
     """
     labels = []
     counter = 0
@@ -592,7 +592,7 @@ def create_matrix_from_file(coh_file, channels):
             # initialize matrix!
             darm_psd = Spectrum.from_hdf5(f['psd1'][f['psd1'].keys()[0]])
             First = 0
-            if failed_channels is 'None':
+            if isinstance(failed_channels, str)
                 coh_matrix = np.zeros((darm_psd.size, len(channels)))
             else:
                 coh_matrix = np.zeros((darm_psd.size, (len(channels) - len(failed_channels))))
