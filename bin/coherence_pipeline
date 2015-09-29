@@ -83,7 +83,7 @@ if not params.subsystem:
 
         # plot coherence matrix from file produced
         cf.plot_coherence_matrix_from_file(
-            params.channel1, channels, '%s/%s' % (outDir, fname), sub)
+            params.channel1, chans, '%s/%s' % (outDir, fname), sub)
 else:
     coh_io.create_directory_structure(
         [params.subsystem], params.st, directory=params.dir)
@@ -107,4 +107,4 @@ else:
 
     # plot coherence matrix from file produced
     cf.plot_coherence_matrix_from_file(
-        params.channel1, channels, '%s/%s' % (outDir, fname), params.subsystem)
+        params.channel1, chans, '%s/%s' % (outDir, fname), params.subsystem)

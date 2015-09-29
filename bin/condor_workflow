@@ -53,7 +53,6 @@ params = parse_command_line()
 pipeline_dict = coh_io.read_pipeline_ini(params.ini)
 env_params, run_params = coh_io.check_ini_params(pipeline_dict)
 channel_dict = coh_io.read_list(env_params['list'])
-
 try:
     time_file = env_params['online_time_file']
     inc = int(env_params['online_increment'])
@@ -63,17 +62,25 @@ except KeyError:
     st = params.st
     et = params.et
 
+# create directory structure
+subsystems = channel_dict.keys()
+coh_io.create_directory_structure(subsystems, st, env_params['base_directory'])
+
+# get darm and DQ flag from params...we'll use them a lot.
 darm_channel = run_params['darm_channel']
 flag = run_params['flag']
 
 
+# make sure flag and darm are for same IFO. I've done this wrong
+# too many times to make the mistake again.
 if not coh_io.check_channel_and_flag(darm_channel, flag):
     raise ValueError('channel and flag are not for same IFO!')
 
 # get and write DQ segments:
 segs = DataQualityFlag.query_dqsegdb(
     flag, st, et, url='https://segments.ligo.org')
-seg_dir = coh_io.get_directory_structure('SEGMENTS', st, env_params['base_directory'])
+seg_dir = coh_io.get_directory_structure(
+    'SEGMENTS', st, env_params['base_directory'])
 seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et,
                                                  directory=seg_dir)
 segs.write('%s.xml.gz' % (seg_file))
