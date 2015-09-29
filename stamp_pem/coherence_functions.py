@@ -592,7 +592,7 @@ def create_matrix_from_file(coh_file, channels):
             # initialize matrix!
             darm_psd = Spectrum.from_hdf5(f['psd1'][f['psd1'].keys()[0]])
             First = 0
-            coh_matrix = np.zeros((darm_psd.size, len(channels)))
+            coh_matrix = np.zeros((darm_psd.size, (len(channels) - len(failed_channels))))
         if channel in failed_channels:
             continue
         data = Spectrum.from_hdf5(f['coherences'][channel])
