@@ -674,7 +674,9 @@ def plot_coherence_matrix_from_file(darm_channel, channels, coh_file, subsystem=
     counter = 0
     coh_matrix, frequencies, labels, N = create_matrix_from_file(coh_file, channels)
     plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=fhigh, flow=flow)
-    outfile = coh_file.split('.')[0]
+    outfile = coh_file
+    if outfile[-3:] == 'hdf':
+        outfile = outfile[:-4]
     plot.savefig(outfile)
     plot.close()
 
