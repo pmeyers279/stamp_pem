@@ -647,7 +647,7 @@ def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=None
     return plt
 
 
-def plot_coherence_matrix_from_file(darm_channel, channel_list, coh_file, subsystem=None, fhigh=None, flow=None):
+def plot_coherence_matrix_from_file(darm_channel, channels, coh_file, subsystem='CHANS', fhigh=None, flow=None):
     """
     Plots coherence matrix from file
 
@@ -672,13 +672,6 @@ def plot_coherence_matrix_from_file(darm_channel, channel_list, coh_file, subsys
     """
     labels = []
     counter = 0
-    if isinstance(channel_list, str):
-        chans = coh_io.read_list(channel_list)
-    else:
-        chans = channel_list
-    channels = []
-    for key in chans[subsystem].keys():
-        channels.append(chans[subsystem][key])
     coh_matrix, frequencies, labels, N = create_matrix_from_file(coh_file, channels)
     plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=fhigh, flow=flow)
     outfile = coh_file.split('.')[0]

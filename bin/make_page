@@ -41,7 +41,7 @@ seg_dir = coh_io.get_directory_structure(
 flag = run_params['flag']
 seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et,
                                                  directory=seg_dir)
-segs = DataQualityFlag.read(seg_file)
+segs = DataQualityFlag.read('%s.xml.gz' % seg_file)
 
 # get channels
 channels = coh_io.read_list(env_params['list'])
@@ -60,7 +60,7 @@ page.init(title="Coherence Studies", header="%d - %d" %
 page.div(class_='segments')
 page.h3('SEGMENTS ANALYZED')
 for seg in segs:
-    page.p('%d - %d', seg[0].seconds, seg[1].seconds)
+    page.p('%d - %d' % (seg[0].seconds, seg[1].seconds))
 page.div.close()
 page.p('Data is in hdf5 format. It can be loaded by importing h5py in python \
        <br> >>> from gwpy.spectrum import Spectrum\
@@ -80,7 +80,7 @@ page.p('Data is in hdf5 format. It can be loaded by importing h5py in python \
 page.div(class_='thumbs')
 
 for subsystem in subsystems:
-    fname_data = coh_io.create_coherence_data_filename(params.darm,
+    fname_data = coh_io.create_coherence_data_filename(darm,
                                                        subsystem,
                                                        st, et)
     file_directory = coh_io.get_directory_structure(
@@ -99,6 +99,6 @@ output_dir = coh_io.get_directory_structure(
     'HTML', st, directory=env_params['base_directory'])
 output_fname = coh_io.create_coherence_data_filename(
     darm, 'HTML', st, et, directory=output_dir)
-f = open(output_fname, 'w')
-f.write(page)
+f = open(output_fname + '.html', 'w')
+print >> f, page
 f.close()

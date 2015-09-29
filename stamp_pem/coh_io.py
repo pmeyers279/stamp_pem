@@ -211,7 +211,7 @@ def check_ini_params(pipeline_dict):
             'stride, darm_channel, and dq flag must be in the ini file')
 
     try:
-        segmentDuration = run_params['segmentDuration']
+        segmentDuration = run_params['segmentduration']
     except KeyError:
         run_params['segmentDuration'] = stride
         print 'segmentDuration not set. setting it to stride'
