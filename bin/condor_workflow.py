@@ -33,7 +33,7 @@ def build_arg(env_params, run_params):
     flags['-darm-channel'] = run_params['darm_channel']
     flags['-stride'] = str(run_params['stride'])
     flags['-subsystem'] = '$(subsystem)'
-    flags['-segment-duration'] = str(run_params['segmentDuration'])
+    flags['-segment-duration'] = str(run_params['segmentduration'])
     flags['d'] = str(env_params['base_directory'])
     flags['-frames'] = 1
     if run_params['spec_fhigh']:
