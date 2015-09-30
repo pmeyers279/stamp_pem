@@ -585,6 +585,7 @@ def create_matrix_from_file(coh_file, channels):
     f = h5py.File(coh_file, 'r')
     # get number of averages
     N = f['info'].value
+    channels = f['psd2s'].keys()
     failed_channels = f['failed_channels'].value
     print failed_channels
     First = 1
@@ -593,10 +594,7 @@ def create_matrix_from_file(coh_file, channels):
             # initialize matrix!
             darm_psd = Spectrum.from_hdf5(f['psd1'][f['psd1'].keys()[0]])
             First = 0
-            if isinstance(failed_channels, str):
-                coh_matrix = np.zeros((darm_psd.size, len(channels)))
-            else:
-                coh_matrix = np.zeros((darm_psd.size, (len(channels) - len(failed_channels))))
+            coh_matrix = np.zeros((darm_psd.size, len(channels)))
         if channel in failed_channels:
             continue
         data = Spectrum.from_hdf5(f['coherences'][channel])
