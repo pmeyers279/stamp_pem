@@ -4,6 +4,7 @@ from stamp_pem import coherence_functions as cf
 import optparse
 from stamp_pem import coh_io
 import os
+import numpy as np
 
 os.system('echo $LIGO_DATAFIND_SERFER')
 
@@ -48,6 +49,12 @@ def parse_command_line():
     parser.add_option(
         "--spec-fhigh", dest="spec_fhigh", type=float,
         help=' spectrogram high frequency', default=None)
+    parser.add_option(
+        "--job-num", help="job number",
+        dest='jn', type=int, default=None)
+    parser.add_option(
+        "--num-chans-to-combine", help="job number",
+        dest='nchans', type=int, default=20)
     params, args = parser.parse_args()
     return params
 
@@ -88,22 +95,34 @@ else:
     coh_io.create_directory_structure(
         [params.subsystem], params.st, directory=params.dir)
     chans = []
+    # get channels
     for key in channels[params.subsystem].keys():
         chans.append(channels[params.subsystem][key])
-    cf.coherence_from_list(params.channel1, chans,
+
+    # alphabetize them, pick out the ones we want
+    channel_list = sorted(chans)
+    if params.nj:
+        idxs = params.nj + np.arange(params.nchans)
+        # make sure indices actually exist!
+        idxs = idxs[np.where(idxs < len(channel_list)[0])]
+
+    channel_list = chans[idxs]
+
+    cf.coherence_from_list(params.channel1, channel_list,
                            params.stride,
                            params.st, params.et, frames=params.frames,
                            pad=True, fhigh=int(params.fhigh),
                            subsystem=params.subsystem, directory=params.dir,
                            segmentDuration=params.sd,
                            spec_fhigh=params.spec_fhigh,
-                           spec_flow=params.spec_fhigh)
+                           spec_flow=params.spec_fhigh,
+                           tag=params.nj)
 
     # generate filename used in calculating coherence from list
     outDir = coh_io.get_directory_structure(
         params.subsystem, params.st, directory=params.dir)
     fname = coh_io.create_coherence_data_filename(
-        params.channel1, params.subsystem, params.st, params.et)
+        params.channel1, params.subsystem, params.st, params.et, tag=params.nj)
 
     # plot coherence matrix from file produced
     cf.plot_coherence_matrix_from_file(

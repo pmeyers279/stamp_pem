@@ -417,7 +417,7 @@ def coherence_from_list(darm_channel, channels,
                         stride, st, et, frames=False, 
                         pad=False, fhigh=None, subsystem=None,
                         spec_fhigh=None,spec_flow=None, directory='./',
-                        segmentDuration=None):
+                        segmentDuration=None, tag=None):
     """
     Takes coherence from a list of channels and saves it to a file.
     Parameters:
@@ -490,7 +490,7 @@ def coherence_from_list(darm_channel, channels,
         # plot coherence spectrogram
         plot = plot_coherence_specgram(coh_spec,darm_channel, channel, st, et,
                                 fhigh=spec_fhigh, flow=spec_flow)
-        spec_name = coh_io.create_coherence_data_filename(darm_channel, channel, st, et)
+        spec_name = coh_io.create_coherence_data_filename(darm_channel, channel, st, et, tag=tag)
         outDir = coh_io.get_directory_structure(subsystem, st, directory=directory, specgram=True)
         plot.savefig('%s/%s' % (outDir, spec_name))
 

@@ -4,6 +4,7 @@ import markup
 import optparse
 from stamp_pem import coh_io
 from gwpy.segments import DataQualityFlag
+import numpy as np
 
 
 def parse_command_line():
@@ -19,6 +20,8 @@ def parse_command_line():
         help="optional, extra tag for picking out specific plots if necessary",
         default=None,
         type=str, dest="tag")
+    parser.add_option(
+        "--num-chans-to-combine", dest="nchans", default=20, type=int)
 
     params, args = parser.parse_args()
     return params
@@ -80,17 +83,23 @@ page.p('Data is in hdf5 format. It can be loaded by importing h5py in python \
 page.div(class_='thumbs')
 
 for subsystem in subsystems:
-    fname_data = coh_io.create_coherence_data_filename(darm,
-                                                       subsystem,
-                                                       st, et)
-    file_directory = coh_io.get_directory_structure(
-        subsystem, st, directory=env_params['base_directory'])
-    fname = coh_io.create_coherence_data_filename(
-        darm, subsystem, st, et, tag=params.tag, directory=file_directory)
+    chans = []
+    for key in channels[subsystem].keys():
+        chans.append(channels[subsystem][key])
+    njobs = np.ceil(len(channels) // params.nchans)
 
-    page.img(src=fname + '.png', width=1200, height=600, class_="thumb")
-    page.a('<br> Full frequency band data for %s subsystem <br>' %
-           subsystem, href=fname_data)
+    for job in njobs:
+        fname_data = coh_io.create_coherence_data_filename(darm,
+                                                           subsystem,
+                                                           st, et, tag=job)
+        file_directory = coh_io.get_directory_structure(
+            subsystem, st, directory='../../')
+        fname = coh_io.create_coherence_data_filename(
+            darm, subsystem, st, et, tag=job, directory=file_directory)
+
+        page.img(src=fname + '.png', width=1200, height=600, class_="thumb")
+        page.a('<br> Full frequency band data for %s subsystem <br>' %
+               subsystem, href=fname_data)
 
 page.div.close()
 
