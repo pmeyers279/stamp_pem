@@ -101,10 +101,10 @@ else:
 
     # alphabetize them, pick out the ones we want
     channel_list = sorted(chans)
-    if params.nj:
-        idxs = params.nj + np.arange(params.nchans)
+    if params.jn:
+        idxs = params.jn + np.arange(params.nchans)
         # make sure indices actually exist!
-        idxs = idxs[np.where(idxs < len(channel_list)[0])]
+        idxs = idxs[np.where(idxs < len(channel_list))[0]]
 
     channel_list = chans[idxs]
 
@@ -116,13 +116,13 @@ else:
                            segmentDuration=params.sd,
                            spec_fhigh=params.spec_fhigh,
                            spec_flow=params.spec_fhigh,
-                           tag=params.nj)
+                           tag=params.jn)
 
     # generate filename used in calculating coherence from list
     outDir = coh_io.get_directory_structure(
         params.subsystem, params.st, directory=params.dir)
     fname = coh_io.create_coherence_data_filename(
-        params.channel1, params.subsystem, params.st, params.et, tag=params.nj)
+        params.channel1, params.subsystem, params.st, params.et, tag=params.jn)
 
     # plot coherence matrix from file produced
     cf.plot_coherence_matrix_from_file(

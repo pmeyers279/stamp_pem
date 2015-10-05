@@ -21,6 +21,9 @@ def parse_command_line():
     parser.add_option(
         "-e", "--end-time", help="end time", default=None,
         type="int", dest="et")
+    parser.add_option(
+        "--num-chans", help="number of channels",
+        dest="nchans", type=int, default=20)
 
     params, args = parser.parse_args()
     return params
@@ -98,23 +101,29 @@ dag_dir = coh_io.get_directory_structure(
     'DAGS', st, env_params['base_directory'])
 sub_node = {}
 for subsystem in channel_dict.keys():
+    chans = []
+    for key in channel_dict[subsystem].keys():
+        chans.append(channel_dict[subsystem][key])
+        njobs = ceil(len(chans) / params.nchans)
     for seg in segs.active:
         seg_st = seg[0].seconds
         seg_et = seg[1].seconds
-        job = pipeline.CondorDAGJob('vanilla', env_params['executable'])
-        job.set_sub_file('%s/%s-%d-%d.sub' % (
-                         dag_dir, darm_channel.replace(':', '-'),
-                         seg_st, seg_et))
-        job.set_stderr_file(
-            '%s/$(subsystem).err' % (dag_dir))
-        job.set_stdout_file(
-            '%s/$(subsystem).out' % (dag_dir))
-        node = pipeline.CondorDAGNode(job)
-        node.add_macro("subsystem", subsystem)
-        node.add_macro("st", seg_st)
-        node.add_macro("et", seg_et)
-        sub_node[subsystem] = node
-        dag.add_node(node)
+        for njob in njobs:
+            job = pipeline.CondorDAGJob('vanilla', env_params['executable'])
+            job.set_sub_file('%s/%s-%d-%d.sub' % (
+                             dag_dir, darm_channel.replace(':', '-'),
+                             seg_st, seg_et))
+            job.set_stderr_file(
+                '%s/$(subsystem).err' % (dag_dir))
+            job.set_stdout_file(
+                '%s/$(subsystem).out' % (dag_dir))
+            node = pipeline.CondorDAGNode(job)
+            node.add_macro("subsystem", subsystem)
+            node.add_macro("st", seg_st)
+            node.add_macro("et", seg_et)
+            node.add_macro('--job-num', njob)
+            sub_node[subsystem] = node
+            dag.add_node(node)
 for subsystem in channel_dict.keys():
     job = pipeline.CondorDAGJob(
         'vanilla', env_params['combine_executable'])
