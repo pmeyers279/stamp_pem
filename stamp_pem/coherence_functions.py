@@ -675,10 +675,17 @@ def plot_coherence_matrix_from_file(darm_channel, channels, coh_file, subsystem=
     labels = []
     counter = 0
     coh_matrix, frequencies, labels, N = create_matrix_from_file(coh_file, channels)
+<<<<<<< HEAD
+    for label in labels:
+	label.replace(subsystem,'')
+    plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem)
+    outfile = coh_file.split('.')[0]
+=======
     plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=fhigh, flow=flow)
     outfile = coh_file
     if outfile[-3:] == 'hdf':
         outfile = outfile[:-4]
+>>>>>>> master
     plot.savefig(outfile)
     plot.close()
 

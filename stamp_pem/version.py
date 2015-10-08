@@ -5,12 +5,20 @@
 """
 
 __author__ = 'Duncan Macleod <duncan.macleod@ligo.org>'
+<<<<<<< HEAD
+__version__ = 'dcad2e1980e4f51101cfecb6ee0191407106b243'
+__date__ = '2015-09-21 19:17:17 +0000'
+
+git_id = 'dcad2e1980e4f51101cfecb6ee0191407106b243'
+git_branch = 'dev'
+=======
 __version__ = 'd2f1d776755bcd5d0425b344617aeda203c3190b'
 __date__ = '2015-10-01 18:25:43 +0000'
 
 git_id = 'd2f1d776755bcd5d0425b344617aeda203c3190b'
 git_branch = 'master'
+>>>>>>> master
 git_tag = None
-git_author = 'Patrick Meyers <pmeyers279@gmail.com>'
-git_committer = 'Patrick Meyers <pmeyers279@gmail.com>'
+git_author = 'meyers <meyers@ldas-pcdev1.ligo-la.caltech.edu>'
+git_committer = 'meyers <meyers@ldas-pcdev1.ligo-la.caltech.edu>'
 git_status = None
