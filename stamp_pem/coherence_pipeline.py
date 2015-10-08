@@ -1,8 +1,11 @@
-#!/opt/local/bin/python
+#!/usr/bin/env python
 
 from stamp_pem import coherence_functions as cf
 import optparse
 from stamp_pem import coh_io
+import os
+
+os.system('echo $LIGO_DATAFIND_SERFER')
 
 
 def parse_command_line():
@@ -37,7 +40,7 @@ def parse_command_line():
         "--segment-duration", dest='sd', help="segment duration for specgram",
         type=float, default=None)
     parser.add_option(
-        "--subsystem", dest='sub', type=str, help='subsystem', default=None)
+        "--subsystem", dest='subsystem', type=str, help='subsystem', default=None)
     params, args = parser.parse_args()
     return params
 
