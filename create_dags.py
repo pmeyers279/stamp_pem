@@ -18,8 +18,8 @@ for j in range(10):
     st += 100
     et = st + 100
 datajob.set_sub_file('pat.sub')
-arg = '-s $(start) -e $(end) --stride %d --fhigh %d --list channels.ini' % (
-	   10, 50)
+arg = '-s $(start) -e $(end) --stride %d --fhigh %d --list channels.ini --frames %d' % (
+	   10, 50, 1)
 print arg
 datajob.add_arg(arg)
 datajob.set_stdout_file("$(start).out")

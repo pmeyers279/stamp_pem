@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+
+import markup
+import optparse
+from stamp_pem import coh_io
+from gwpy.segments import DataQualityFlag
+
+
+def parse_command_line():
+    """
+    parse command parse command line
+    """
+    parser = optparse.OptionParser()
+    parser.add_option(
+        "--ini-file", "-i", help="pipeline ini file",
+        default=None, type=str, dest='ini')
+
+    params, args = parser.parse_args()
+    return params
+
+params = parse_command_line()
+
+# read out parameters
+pipeline_dict = coh_io.read_pipeline_ini(params.ini)
+env_params, run_params = coh_io.check_ini_params(pipeline_dict)
+
+# get times
+time_file = env_params['online_time_file']
+inc = int(env_params['online_increment'])
+st = coh_io.read_time_from_file(time_file)
+et = st + inc
+
+# get segments
+seg_dir = coh_io.get_directory_structure(
+    'SEGMENTS', st, env_params['base_directory'])
+flag = run_params['flag']
+seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et,
+                                                 directory=seg_dir)
+segs = DataQualityFlag.read(seg_file)
+
+# get channels
+channels = coh_io.read_list(env_params['list'])
+subsystems = channels.keys()
+darm = run_params['darm_channel']
+
+# initialize some variables
+images = []
+data_files = []
+
+# make page
+page = markup.page()
+page.init(title="Coherence Studies", header="%d - %d" %
+          (st, et),
+          footer="questions? contact patrick.meyers@ligo.org")
+page.div(class_='segments')
+page.h3('SEGMENTS ANALYZED')
+for seg in segs:
+    page.p('%d - %d', seg[0].seconds, seg[1].seconds)
+page.div.close()
+page.p('Data is in hdf5 format. It can be loaded by importing h5py in python \
+       <br> >>> from gwpy.spectrum import Spectrum\
+       <br> >>> import h5py\
+       <br> >>> f = h5py.File(%(filename))\
+       <br> >>> data = Spectrum.h5py(f[%(type)][%(channel)])\
+       <br>\
+       <br> Types are "coherences", "psd1", "psd2s", "csd12s", "info"\
+       <br> The channel with which all other channels take coherence\
+       <br> is in the title of the filename. The PSD for this channel\
+       <br> is psd1. The psd for all other channels is psd2s.\
+       <br> The csd for channel1 and all channel2s is in csd12s.\
+       <br> Info is the number of time segments used in the analysis.\
+       <br> coherences = abs(csd12s)^2 / psd1 * psd2s.\
+       <br> coherence SNR (which is plotted) is taken to be N * coherences.'
+       )
+page.div(class_='thumbs')
+
+for subsystem in subsystems:
+    fname_data = coh_io.create_coherence_data_filename(params.darm,
+                                                       subsystem,
+                                                       st, et)
+    file_directory = coh_io.get_directory_structure(
+        subsystem, st, directory=env_params['base_directory'])
+    fname = coh_io.create_coherence_data_filename(
+        darm, subsystem, st, et, tag=params.tag, directory=file_directory)
+
+    page.img(src=fname + '.png', width=1200, height=600, class_="thumb")
+    page.a('<br> Full frequency band data for %s subsystem <br>' %
+           subsystem, href=fname_data)
+
+page.div.close()
+
+# save file
+output_dir = coh_io.get_directory_structure(
+    'HTML', st, directory=env_params['base_directory'])
+output_fname = coh_io.create_coherence_data_filename(
+    darm, 'HTML', st, et, directory=output_dir)
+f = open(output_fname, 'w')
+f.write(page)
+f.close()

@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+import h5py
+from gwpy.spectrum import Spectrum
+import optparse
+from stamp_pem import coherence_functions as cf
+from stamp_pem import coh_io
+from gwpy.segments import DataQualityFlag
+import numpy as np
+
+
+def parse_command_line():
+    """
+    parse_command_line
+    """
+    parser = optparse.OptionParser()
+    parser.add_option(
+        "--darm-channel", help="channel 1", default='L1:GDS-CALIB_STRAIN',
+        type=str)
+    parser.add_option(
+        "-s", "--start-time", dest='st', help="start time", type=int,
+        default=None)
+    parser.add_option(
+        "-e", "--end-time", dest='et', help="end time", type=int, default=None)
+    parser.add_option(
+        "--subsystem", dest='subsystem', type=str, help='subsystem',
+        default=None)
+    parser.add_option(
+        "--directory", dest="directory", type=str, help="base directory")
+    parser.add_option(
+        "--flag", dest="flag", type=str, help="data quality flag")
+    params, args = parser.parse_args()
+    return params
+
+params = parse_command_line()
+
+seg_dir = coh_io.get_directory_structure(
+    'SEGMENTS', params.st, params.directory)
+
+segs_file = coh_io.create_coherence_data_filename(params.flag, 'SEGMENTS',
+                                                  params.st, params.et,
+                                                  directory=seg_dir)
+segs = DataQualityFlag.read(segs_file + '.xml.gz')
+
+counter = 0
+for seg in segs:
+    counter += 1
+
+
+if counter > 1:
+    new_file = coh_io.create_coherence_data_filename(params.darm_channel,
+                                                     params.subsystem,
+                                                     params.st, params.et,
+                                                     directory=params.directory)
+    new_f = h5py.File(new_file, 'w')
+    keys = ['psd1', 'psd2s', 'csd12s']
+    data = {}
+    data['info'] = 0
+
+    First = 1
+    for seg in segs.active():
+        seg_st = seg[0].seconds
+        seg_et = seg[1].seconds
+        f = coh_io.create_coherence_data_filename(params.darm_channel,
+                                                  params.subsystem,
+                                                  seg_st, seg_et,
+                                                  directory=params.directory)
+        f = h5py.File(f, 'r')
+        data['info'] += f['info']
+        for key in keys:
+            data[key] = {}
+            for chan in f[key].keys():
+                if First:
+                    data[key][chan] = f['info'] * \
+                        Spectrum.from_hdf5(f[key][chan])
+                    First = First - 1
+                else:
+                    data[key][chan] +=\
+                        data[key][chan] + f['info'] * \
+                        Spectrum.from_hdf5(f[key][chan])
+
+    coherences = new_f.create_group('coherences')
+    psd1 = new_f.create_group('psd1')
+    psd2s = new_f.create_group('psd2s')
+    csd12s = new_f.create_group('csd12s')
+
+    for channel in data['psd2s'].keys():
+        csd12s_temp = data['csd12s'][channel] / data['info']
+        psd1_temp = data['psd1'][params.darm_channel] / data['info']
+        psd2_temp = data['psd2s'][channel] / data['info']
+        coh_temp = np.abs(csd12s_temp) ** 2 / (psd1_temp * psd2_temp)
+        csd12s_temp.to_hdf5(new_f['csd12s'], name=channel)
+        psd2_temp.to_hdf5(new_f['psd2s'], name=channel)
+        coh_temp.to_hdf5(new_f['coherences'], name=channel)
+    new_f['info'] = data['info']
+    psd1_temp.to_hdf5(new_f['psd1'], name=params.darm_channel)
+    new_f['segments'] = segs
+    new_file.close()
