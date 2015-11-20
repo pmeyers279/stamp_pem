@@ -34,6 +34,7 @@ def build_arg(env_params, run_params):
     flags['-list'] = env_params['list']
     flags['s'] = '$(st)'
     flags['e'] = '$(et)'
+    flags['-job-num'] = '$(jobNum)'
     flags['-fhigh'] = str(run_params['fhigh'])
     flags['-darm-channel'] = run_params['darm_channel']
     flags['-stride'] = str(run_params['stride'])
@@ -104,15 +105,16 @@ for subsystem in channel_dict.keys():
     chans = []
     for key in channel_dict[subsystem].keys():
         chans.append(channel_dict[subsystem][key])
-        njobs = ceil(len(chans) / params.nchans)
-    for seg in segs.active:
-        seg_st = seg[0].seconds
-        seg_et = seg[1].seconds
-        for njob in njobs:
+        njobs = (len(chans) / params.nchans) + 1
+    for seg in segs:
+        print seg
+        seg_st = seg[0]
+        seg_et = seg[1]
+        for njob in range(njobs):
             job = pipeline.CondorDAGJob('vanilla', env_params['executable'])
             job.set_sub_file('%s/%s-%d-%d.sub' % (
                              dag_dir, darm_channel.replace(':', '-'),
-                             seg_st, seg_et))
+                             st, et))
             job.set_stderr_file(
                 '%s/$(subsystem).err' % (dag_dir))
             job.set_stdout_file(
@@ -121,7 +123,7 @@ for subsystem in channel_dict.keys():
             node.add_macro("subsystem", subsystem)
             node.add_macro("st", seg_st)
             node.add_macro("et", seg_et)
-            node.add_macro('--job-num', njob)
+            node.add_macro('jobNum', njob + 1)
             sub_node[subsystem] = node
             dag.add_node(node)
 for subsystem in channel_dict.keys():

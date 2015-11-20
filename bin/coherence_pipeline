@@ -102,11 +102,16 @@ else:
     # alphabetize them, pick out the ones we want
     channel_list = sorted(chans)
     if params.jn:
-        idxs = params.jn + np.arange(params.nchans)
+        idxs = (params.jn - 1) * params.nchans + (np.arange(params.nchans))
         # make sure indices actually exist!
         idxs = idxs[np.where(idxs < len(channel_list))[0]]
 
-    channel_list = chans[idxs]
+    channel_list = []
+    for idx in idxs:
+        channel_list.append(chans[idx])
+    print channel_list
+
+
 
     cf.coherence_from_list(params.channel1, channel_list,
                            params.stride,
