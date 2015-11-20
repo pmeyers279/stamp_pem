@@ -469,7 +469,7 @@ def coherence_from_list(darm_channel, channels,
 
     # set up hdf5 file for output
     outputDir = coh_io.get_directory_structure(subsystem, st, directory=directory)
-    fname = coh_io.create_coherence_data_filename(darm_channel, subsystem, st, et)
+    fname = coh_io.create_coherence_data_filename(darm_channel, subsystem, st, et, tag=tag)
     filename = '%s/%s'%(outputDir, fname)
     f = h5py.File(filename, 'w')
     coherences = f.create_group('coherences')
