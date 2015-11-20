@@ -17,6 +17,7 @@ stamp_pem/coh_io.py
 stamp_pem/coh_io.pyc
 stamp_pem/coherence_functions.py
 stamp_pem/coherence_functions.pyc
+stamp_pem/coherence_pipeline.py
 stamp_pem/core.py
 stamp_pem/core.pyc
 stamp_pem/test_snr_distribution.py
