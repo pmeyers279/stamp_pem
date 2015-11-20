@@ -90,7 +90,7 @@ seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et,
 segs.write('%s.xml.gz' % (seg_file))
 
 
-datajob = pipeline.CondorDAGJob('vanilla', env_params['executable'])
+#datajob = pipeline.CondorDAGJob('vanilla', env_params['executable'])
 datajob2 = pipeline.CondorDAGJob(
     'vanilla', env_params['combine_executable'])
 dag = pipeline.CondorDAG(
@@ -114,7 +114,7 @@ for subsystem in channel_dict.keys():
             job = pipeline.CondorDAGJob('vanilla', env_params['executable'])
             job.set_sub_file('%s/%s-%d-%d.sub' % (
                              dag_dir, darm_channel.replace(':', '-'),
-                             st, et))
+                             seg_st, seg_et))
             job.set_stderr_file(
                 '%s/$(subsystem).err' % (dag_dir))
             job.set_stdout_file(
@@ -141,19 +141,21 @@ for subsystem in channel_dict.keys():
 
 dagName = '%s/%s-%d-%d' % (
     dag_dir, darm_channel.replace(':', '-'), st, et)
-
+for seg in segs:
+    datajob = pipeline.CondorDAGJob('vanilla', env_params['executable'])
 # datajob info
-datajob_sub = '%s/%s-%d-%d.sub' % (
-    dag_dir, darm_channel.replace(':', '-'), st, et)
-datajob.set_sub_file(datajob_sub)
+    datajob_sub = '%s/%s-%d-%d.sub' % (
+                  dag_dir, darm_channel.replace(':', '-'), seg[0], seg[1])
+    datajob.set_sub_file(datajob_sub)
+    datajob.set_stderr_file(
+        '%s/$(subsystem).err' % (dag_dir))
+    datajob.set_stdout_file(
+        '%s/$(subsystem).out' % (dag_dir))
+    datajob.set_log_file(
+        '%s/$(subsystem).log' % (dag_dir))
+
 
 datajob2_sub = '%s/combine_jobs-%d-%d.sub' % (dag_dir, st, et)
-datajob.set_stderr_file(
-    '%s/$(subsystem).err' % (dag_dir))
-datajob.set_stdout_file(
-    '%s/$(subsystem).out' % (dag_dir))
-datajob.set_log_file(
-    '%s/$(subsystem).log' % (dag_dir))
 
 # combine jobs post processing info
 datajob2.set_sub_file(datajob2_sub)

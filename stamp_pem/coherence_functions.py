@@ -487,8 +487,10 @@ def coherence_from_list(darm_channel, channels,
         coh_temp, csd_temp, psd1_temp, psd2_temp, N, coh_spec = \
             coherence(fftgram1, data, stride, pad=pad, segmentDuration=segmentDuration)
 
+        Nspec = segmentDuration / float(stride)
+
         # plot coherence spectrogram
-        plot = plot_coherence_specgram(coh_spec,darm_channel, channel, st, et,
+        plot = plot_coherence_specgram(coh_spec,darm_channel, channel, st, et, Nspec, 
                                 fhigh=spec_fhigh, flow=spec_flow)
         spec_name = coh_io.create_coherence_data_filename(darm_channel, channel, st, et, tag=tag)
         outDir = coh_io.get_directory_structure(subsystem, st, directory=directory, specgram=True)
@@ -511,7 +513,7 @@ def coherence_from_list(darm_channel, channels,
     f.close()
 
 
-def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, fhigh=None, flow=None):
+def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, N, fhigh=None, flow=None):
     """
     Plots coherence spectrogram
 
@@ -541,7 +543,8 @@ def plot_coherence_specgram(coh_spec, darm_channel, channel, st, et, fhigh=None,
     chan_pname = channel.replace('_','\_')
     darm_channel = darm_channel.replace(':','-')
     darm_chan_pname=darm_channel.replace('_','\_')
-    plot = coh_spec.plot(vmin=5e-2,vmax=1,norm='log')
+    low = 1. / N ** 2
+    plot = coh_spec.plot(vmin=low,vmax=1,norm='log', cmap='Spectral_r')
     ax = plot.gca()
     plot.add_colorbar(label='Coherence')
     if not fhigh:
@@ -634,7 +637,7 @@ def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=None
     plt.figure(figsize=(1200. / my_dpi, 600. / my_dpi), dpi=my_dpi)
     plt.pcolormesh(frequencies, np.arange(
         0, len(labels) + 1), coh_matrix.value.T,
-        norm=LogNorm(vmin=1, vmax=20))
+        norm=LogNorm(vmin=5e-2, vmax=20), cmap=plt.get_cmap('Spectral_r'))
     cbar = plt.colorbar(label='coherence SNR')
     cbar.set_ticks(np.arange(1, 21))
     ax = plt.gca()
@@ -675,17 +678,10 @@ def plot_coherence_matrix_from_file(darm_channel, channels, coh_file, subsystem=
     labels = []
     counter = 0
     coh_matrix, frequencies, labels, N = create_matrix_from_file(coh_file, channels)
-<<<<<<< HEAD
-    for label in labels:
-	label.replace(subsystem,'')
-    plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem)
-    outfile = coh_file.split('.')[0]
-=======
     plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=fhigh, flow=flow)
     outfile = coh_file
     if outfile[-3:] == 'hdf':
         outfile = outfile[:-4]
->>>>>>> master
     plot.savefig(outfile)
     plot.close()
 
