@@ -62,12 +62,10 @@ for subsystem in subsystems:
         try:
             coh_matrix, frequencies, labels, N = cf.create_matrix_from_file(file, channels)
         except KeyError or h5py.h5e.LowLevelIOError or IOError or h5py._stub.IOError:
-            print 'HI',file
             continue
         if coh_matrix is None:
-            print file             
 	    continue
-        plot = cf.plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem)
+        plot = cf.plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, N)
         ax = plot.gca()
         ax.set_xlim(params.flow,params.fhigh)
         plot.savefig(file+'-'+str(int(params.flow*10))+'-'+str(int(params.fhigh*10)))
