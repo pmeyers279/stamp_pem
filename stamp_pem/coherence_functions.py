@@ -379,7 +379,11 @@ def _read_data(channel, st, et, frames=False):
 	    cache = connection.find_frame_urls(ifo[0],ifo+'_HOFT_C00', st, et, urltype='file')
 	else:
 	    cache = connection.find_frame_urls(ifo[0], ifo + '_C', st, et,urltype='file')
-        data = TimeSeries.read(cache, channel, st, et)
+        try:
+            data = TimeSeries.read(cache, channel, st, et)
+        except IndexError:
+            cache = connection.find_frame_urls(ifo[0], ifo+'_R', st, et, urltype='file')
+            data = TimeSeries.read(cache, channel, st, et)
     else:
         data = TimeSeries.fetch(channel, st, et)
 
