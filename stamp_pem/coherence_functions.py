@@ -382,16 +382,11 @@ def _read_data(channel, st, et, frames=False):
 	    print 'HI!'
 	else:
 	    cache = connection.find_frame_urls(ifo[0], ifo + '_C', st, et,urltype='file')
-<<<<<<< HEAD
         try:
             data = TimeSeries.read(cache, channel, st, et)
         except IndexError:
             cache = connection.find_frame_urls(ifo[0], ifo+'_R', st, et, urltype='file')
             data = TimeSeries.read(cache, channel, st, et)
-=======
-	print channel
-        data = TimeSeries.read(cache, channel, st, et)
->>>>>>> 449f1e1b7ce7ba64ebff9a0f4bc0c3ed44b231eb
     else:
         data = TimeSeries.fetch(channel, st, et)
 
@@ -603,23 +598,27 @@ def create_matrix_from_file(coh_file, channels):
     # get number of averages
     N = f['info'].value
     channels = f['psd2s'].keys()
-    failed_channels = f['failed_channels'].value
-    print failed_channels
     First = 1
+    s = 0
+    for channel in channels:
+        data = Spectrum.from_hdf5(f['coherences'][channel])
+        s_temp = data.size
+        if s_temp > s:
+            s = s_temp
     for channel in channels:
         if First:
             # initialize matrix!
             darm_psd = Spectrum.from_hdf5(f['psd1'][f['psd1'].keys()[0]])
             First = 0
-            coh_matrix = np.zeros((darm_psd.size, len(channels)))
-        if channel in failed_channels:
-            continue
+            s = max(s, darm_psd.size)
+            coh_matrix = np.zeros((s, len(channels)))
         data = Spectrum.from_hdf5(f['coherences'][channel])
         labels.append(channel[3:-3].replace('_', '-'))
         coh_matrix[:data.size, counter] = data
         counter += 1
     coh_matrix = Spectrogram(coh_matrix * N)
-    return coh_matrix, darm_psd.frequencies.value, labels, N
+    frequencies = (np.arange(s)+1) * (darm_psd.frequencies.value[1] - darm_psd.frequencies.value[0])
+    return coh_matrix, frequencies, labels, N
 
 def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=None, flow=None):
     """

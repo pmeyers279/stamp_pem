@@ -16,7 +16,7 @@ def parse_command_line():
     parser = optparse.OptionParser()
     parser.add_option(
         "--darm-channel", help="channel 1", default='L1:GDS-CALIB_STRAIN',
-        type=str)
+        type=str, dest="darm")
     parser.add_option(
         "-s", "--start-time", dest='st', help="start time", type=int,
         default=None)
@@ -39,7 +39,7 @@ list = coh_io.read_list(params.cl)
 subsystems = list.keys()
 
 for subsystem in subsystems:
-    cmd = 'combine_coherence -s %d -e %d --subsystem %s --directory %s --channel-list %s' % (params.st, params.et, subsystem, params.directory, params.cl)
+    cmd = 'combine_coherence -s %d -e %d --subsystem %s --directory %s --channel-list %s --darm-channel %s' % (params.st, params.et, subsystem, params.directory, params.cl, params.darm)
     directory = coh_io.get_directory_structure(
                     subsystem, params.st, params.directory)
     cmd2 = 'rm %s/*%d-%d' % (directory, params.st, params.et - params.st)
