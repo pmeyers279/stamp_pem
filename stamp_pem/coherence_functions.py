@@ -3,6 +3,7 @@ from gwpy.spectrum import Spectrum
 from glue import datafind
 from gwpy.spectrogram import Spectrogram
 import numpy as np
+import os
 from astropy import units as u
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -375,10 +376,13 @@ def _read_data(channel, st, et, frames=False):
     if frames:
         # read from frames
         connection = datafind.GWDataFindHTTPConnection()
+	print ifo[0]
 	if channel.split(':')[1] == 'GDS-CALIB_STRAIN':
 	    cache = connection.find_frame_urls(ifo[0],ifo+'_HOFT_C00', st, et, urltype='file')
+	    print 'HI!'
 	else:
 	    cache = connection.find_frame_urls(ifo[0], ifo + '_C', st, et,urltype='file')
+	print channel
         data = TimeSeries.read(cache, channel, st, et)
     else:
         data = TimeSeries.fetch(channel, st, et)
@@ -585,6 +589,8 @@ def create_matrix_from_file(coh_file, channels):
     """
     labels = []
     counter = 0
+    if not os.path.exists(coh_file):
+	return None, None, None, None
     f = h5py.File(coh_file, 'r')
     # get number of averages
     N = f['info'].value

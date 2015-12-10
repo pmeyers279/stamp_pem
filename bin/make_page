@@ -3,8 +3,10 @@
 import markup
 import optparse
 from stamp_pem import coh_io
-from gwpy.segments import DataQualityFlag
+from gwpy.segments import (DataQualityFlag, SegmentList, Segment)
 import numpy as np
+import glob
+#import pdb
 
 
 def parse_command_line():
@@ -22,7 +24,14 @@ def parse_command_line():
         type=str, dest="tag")
     parser.add_option(
         "--num-chans-to-combine", dest="nchans", default=20, type=int)
-
+    parser.add_option(
+        "-s", "--start-time", dest="st", default=None, type=int)
+    parser.add_option(
+        "-e", "--end-time", dest="et", default=None, type=int)
+    parser.add_option(
+        "-l", "--flow", dest="flow", default=None, type=float)
+    parser.add_option(
+        "-g", "--fhigh", dest="fhigh", default=None, type=float)
     params, args = parser.parse_args()
     return params
 
@@ -33,18 +42,32 @@ pipeline_dict = coh_io.read_pipeline_ini(params.ini)
 env_params, run_params = coh_io.check_ini_params(pipeline_dict)
 
 # get times
-time_file = env_params['online_time_file']
 inc = int(env_params['online_increment'])
-st = coh_io.read_time_from_file(time_file)
-et = st + inc
+if params.st is None:
+    time_file = env_params['online_time_file']
+    st = coh_io.read_time_from_file(time_file)
+else:
+    st = params.st
+if params.et is None:
+    et = st + inc
+else:
+    et = params.et
 
 # get segments
 seg_dir = coh_io.get_directory_structure(
     'SEGMENTS', st, env_params['base_directory'])
 flag = run_params['flag']
-seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et,
-                                                 directory=seg_dir)
-segs = DataQualityFlag.read('%s.xml.gz' % seg_file)
+seg_files = sorted(glob.glob('%s/*.xml.gz'%seg_dir))
+#seg_file = coh_io.create_coherence_data_filename(flag, 'SEGMENTS', st, et,
+#                                                 directory=seg_dir)
+segs = SegmentList()
+for seg_file in seg_files:
+    segments = DataQualityFlag.read(seg_file)
+    for segment in segments:
+        if segment[0] >= params.st and segment[1] <= params.et:
+            segs.append(segment)
+#pdb.set_trace()
+#segs = DataQualityFlag.read('%s.xml.gz' % seg_file)
 
 # get channels
 channels = coh_io.read_list(env_params['list'])
@@ -86,16 +109,19 @@ for subsystem in subsystems:
     chans = []
     for key in channels[subsystem].keys():
         chans.append(channels[subsystem][key])
-    njobs = np.ceil(len(channels) // params.nchans)
-
-    for job in njobs:
+    njobs = np.ceil(len(chans) / float(params.nchans))
+    njobs = int(njobs)
+    
+    for job in range(njobs + 1):
         fname_data = coh_io.create_coherence_data_filename(darm,
                                                            subsystem,
-                                                           st, et, tag=job)
+                                                           seg[0], seg[1], tag=job+1)
         file_directory = coh_io.get_directory_structure(
             subsystem, st, directory='../../')
         fname = coh_io.create_coherence_data_filename(
-            darm, subsystem, st, et, tag=job, directory=file_directory)
+            darm, subsystem, seg[0], seg[1], tag=job+1, directory=file_directory)
+	if params.flow:
+            fname = fname + '-' + str(int(params.flow*10)) + '-' + str(int(params.fhigh*10))
 
         page.img(src=fname + '.png', width=1200, height=600, class_="thumb")
         page.a('<br> Full frequency band data for %s subsystem <br>' %
@@ -105,9 +131,11 @@ page.div.close()
 
 # save file
 output_dir = coh_io.get_directory_structure(
-    'HTML', st, directory=env_params['base_directory'])
+    'HTML', params.st, directory=env_params['base_directory'])
 output_fname = coh_io.create_coherence_data_filename(
-    darm, 'HTML', st, et, directory=output_dir)
+    darm, 'HTML', params.st, params.et, directory=output_dir)
+if params.flow:
+    output_fname = output_fname + '-' + str(int(params.flow*10)) + '-' + str(int(params.fhigh*10))
 f = open(output_fname + '.html', 'w')
 print >> f, page
 f.close()
