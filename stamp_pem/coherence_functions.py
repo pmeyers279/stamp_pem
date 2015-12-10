@@ -616,11 +616,11 @@ def create_matrix_from_file(coh_file, channels):
         labels.append(channel[3:-3].replace('_', '-'))
         coh_matrix[:data.size, counter] = data
         counter += 1
-    coh_matrix = Spectrogram(coh_matrix * N)
+    coh_matrix = Spectrogram(coh_matrix)
     frequencies = (np.arange(s)+1) * (darm_psd.frequencies.value[1] - darm_psd.frequencies.value[0])
     return coh_matrix, frequencies, labels, N
 
-def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=None, flow=None):
+def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, nsegs, fhigh=None, flow=None):
     """
     plots coherence matrix.
 
@@ -644,14 +644,17 @@ def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=None
     --------
         matplotlib plot object
     """
+    N = nsegs
     my_dpi = 100
+    low = 5./N
+    high = N/5.
     for label in labels:
         label = label.replace(subsystem,'')
     plt.figure(figsize=(1200. / my_dpi, 600. / my_dpi), dpi=my_dpi)
     plt.pcolormesh(frequencies, np.arange(
-        0, len(labels) + 1), coh_matrix.value.T,
-        norm=LogNorm(vmin=5e-2, vmax=20), cmap=plt.get_cmap('Spectral_r'))
-    cbar = plt.colorbar(label='coherence SNR')
+        0, len(labels) + 1), N*coh_matrix.value.T,
+        norm=LogNorm(vmin=low, vmax=high), cmap=plt.get_cmap('Spectral_r'))
+    cbar = plt.colorbar(label='coherence')
     cbar.set_ticks(np.arange(1, 21))
     ax = plt.gca()
     plt.title(subsystem)
