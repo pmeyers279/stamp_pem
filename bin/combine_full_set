@@ -43,6 +43,7 @@ for subsystem in subsystems:
     directory = coh_io.get_directory_structure(
                     subsystem, params.st, params.directory)
     cmd2 = 'rm %s/*%d-%d' % (directory, params.st, params.et - params.st)
+    print cmd2
     os.system(cmd2)
     print cmd
     os.system(cmd)

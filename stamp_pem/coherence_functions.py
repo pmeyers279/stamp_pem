@@ -379,7 +379,6 @@ def _read_data(channel, st, et, frames=False):
 	print ifo[0]
 	if channel.split(':')[1] == 'GDS-CALIB_STRAIN':
 	    cache = connection.find_frame_urls(ifo[0],ifo+'_HOFT_C00', st, et, urltype='file')
-	    print 'HI!'
 	else:
 	    cache = connection.find_frame_urls(ifo[0], ifo + '_C', st, et,urltype='file')
         try:
@@ -646,8 +645,8 @@ def plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, nsegs, fhi
     """
     N = nsegs
     my_dpi = 100
-    low = 5./N
-    high = N/5.
+    low = 1./50
+    high = 50.
     for label in labels:
         label = label.replace(subsystem,'')
     plt.figure(figsize=(1200. / my_dpi, 600. / my_dpi), dpi=my_dpi)
@@ -694,7 +693,7 @@ def plot_coherence_matrix_from_file(darm_channel, channels, coh_file, subsystem=
     labels = []
     counter = 0
     coh_matrix, frequencies, labels, N = create_matrix_from_file(coh_file, channels)
-    plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, fhigh=fhigh, flow=flow)
+    plot = plot_coherence_matrix(coh_matrix, labels, frequencies, subsystem, N, fhigh=fhigh, flow=flow)
     outfile = coh_file
     if outfile[-3:] == 'hdf':
         outfile = outfile[:-4]

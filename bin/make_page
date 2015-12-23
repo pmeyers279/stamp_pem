@@ -6,6 +6,7 @@ from stamp_pem import coh_io
 from gwpy.segments import (DataQualityFlag, SegmentList, Segment)
 import numpy as np
 import glob
+import h5py
 #import pdb
 
 
@@ -104,22 +105,32 @@ page.p('Data is in hdf5 format. It can be loaded by importing h5py in python \
        <br> coherence SNR (which is plotted) is taken to be N * coherences.'
        )
 page.div(class_='thumbs')
-
+First = 1
 for subsystem in subsystems:
     chans = []
     for key in channels[subsystem].keys():
         chans.append(channels[subsystem][key])
     njobs = np.ceil(len(chans) / float(params.nchans))
     njobs = int(njobs)
+    if First:
+	fdir = coh_io.get_directory_structure(subsystem, params.st, directory='../../results2')
+	fname2 = coh_io.create_coherence_data_filename(darm, subsystem, params.st, (params.st + 158400), tag=1)
+        print fdir
+	print fdir+fname2
+
+	f2 = h5py.File(fdir+fname2)
+	page.p('%d segments analyzed'%f2['info'].value)
+	First = 0
     
-    for job in range(njobs + 1):
+    for job in range(njobs):
+        file_directory = coh_io.get_directory_structure(
+            subsystem, params.st, directory='../../')
         fname_data = coh_io.create_coherence_data_filename(darm,
                                                            subsystem,
-                                                           seg[0], seg[1], tag=job+1)
-        file_directory = coh_io.get_directory_structure(
-            subsystem, st, directory='../../')
+                                                           params.st, params.et, tag=job+1,
+							   directory=file_directory)
         fname = coh_io.create_coherence_data_filename(
-            darm, subsystem, seg[0], seg[1], tag=job+1, directory=file_directory)
+            darm, subsystem, params.st, params.et, tag=job+1, directory=file_directory)
 	if params.flow:
             fname = fname + '-' + str(int(params.flow*10)) + '-' + str(int(params.fhigh*10))
 

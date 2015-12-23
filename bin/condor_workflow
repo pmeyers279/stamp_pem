@@ -105,7 +105,9 @@ for subsystem in channel_dict.keys():
     chans = []
     for key in channel_dict[subsystem].keys():
         chans.append(channel_dict[subsystem][key])
-        njobs = (len(chans) / params.nchans) + 1
+	njobs = np.ceil(len(chans) / float(params.nchans))
+        njobs = int(njobs)
+
     for seg in segs:
         print seg
         seg_st = seg[0]

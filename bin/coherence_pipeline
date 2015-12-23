@@ -7,6 +7,9 @@ import os
 import numpy as np
 
 os.system('echo $LIGO_DATAFIND_SERFER')
+os.system('export X509_USER_CERT="/home/meyers/robotCert/stampPEMSubmit_ldas-pcdev2.ligo-la.caltech.edu-cert.pem"')
+os.system('export X509_USER_KEY="/home/meyers/robotCert/robot.key.pem"')
+os.system('export LIGO_DATAFIND_SERVER="10.13.5.22:80"')
 
 
 def parse_command_line():
